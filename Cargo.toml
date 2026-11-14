@@ -1,0 +1,9 @@
+[package]
+name = "audio-konverter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.29"   # GUI (egui)
+rfd = "0.15"      # nativer Ordner-Dialog
+walkdir = "2"     # Unterordner durchsuchen
