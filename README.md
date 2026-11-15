@@ -47,7 +47,13 @@ Release build: `cargo build --release`. The result is `target\release\audio-konv
 audio-konverter/
 ├── Cargo.toml
 ├── ffmpeg.exe        (not in Git)
-├── src/main.rs
+├── src/
+│   ├── main.rs       Start
+│   ├── app.rs        Zustand, Ablauf
+│   ├── gui.rs        Oberfläche
+│   ├── scan.rs       Ordner durchsuchen
+│   ├── convert.rs    Umwandlung (ffmpeg)
+│   └── bericht.rs    Protokoll (noch leer)
 └── wiki/             features, decisions, diagrams (German)
 ```
 

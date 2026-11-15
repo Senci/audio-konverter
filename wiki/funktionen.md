@@ -8,11 +8,11 @@
 - Ziel liegt im Ordner der Quelle, Originale bleiben unverändert
 - Start, Abbrechen, Fortschrittsbalken; Fehlertext per Mouseover
 
-## Ablauf
+## Ablauf (mit Modulen)
 
 ```mermaid
 flowchart LR
-    A["Ordner wählen"] --> B["Dateien suchen"] --> C["Sperren und Status"] --> D["Start"] --> E["ffmpeg pro Datei"] --> F["Status und Fortschritt"]
+    A["Ordner wählen<br/>gui.rs"] --> B["Dateien suchen<br/>scan.rs"] --> C["Sperren und Status<br/>app.rs"] --> D["Start<br/>app.rs"] --> E["ffmpeg pro Datei<br/>convert.rs"] --> F["Status und Fortschritt<br/>app.rs, gui.rs"]
 ```
 
 ## Sperren
@@ -27,6 +27,8 @@ flowchart TD
     D -->|ja| Y["existiert bereits (gelb)"]
     D -->|nein| Z["bereit"]
 ```
+
+Die Regel steht in `convert.rs` (`ist_gesperrt`), die Statusvergabe in `app.rs`.
 
 ## ffmpeg-Befehle
 

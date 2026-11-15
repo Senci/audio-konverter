@@ -11,9 +11,10 @@
 | Zieldateien nie überschreiben | Datenverlust vermeiden |
 | MP3 mit ID3v2.3 | beste Player-Kompatibilität |
 | Dither beim Runterrechnen auf 16 Bit | saubereres Ergebnis |
-| Eine `main.rs` | reicht bis ca. 500 Zeilen |
+| Code in Module aufgeteilt | eine `main.rs` wäre mit den offenen Punkten zu groß geworden |
+| `bericht.rs` zunächst leer | YAGNI, Datei existiert nur als Platzhalter |
 
-## Geplante Module
+## Module
 
 ```mermaid
 flowchart LR
@@ -21,7 +22,16 @@ flowchart LR
     A --> G["gui.rs"]
     A --> S["scan.rs"]
     A --> C["convert.rs"]
-    A --> B["bericht.rs"]
+    A -.-> B["bericht.rs"]
 ```
 
-`convert.rs` ist die Stelle, an der ffmpeg später durch den eigenen Konverter getauscht wird.
+| Modul | Inhalt |
+|---|---|
+| `main.rs` | nur Start |
+| `app.rs` | `App`, `Datei`, `Status`, Ordner, Start, Abbruch, Nachrichten |
+| `gui.rs` | Seitenleiste, Tabelle, Fußleiste, Farben, Statustexte |
+| `scan.rs` | liefert nur Pfade, `app.rs` baut daraus `Datei` |
+| `convert.rs` | `Ziel`, `Msg`, Sperrregel, ffmpeg-Suche, Thread, Aufruf |
+| `bericht.rs` | Platzhalter für das Protokoll |
+
+`convert.rs` ist die Stelle, an der ffmpeg später durch den eigenen Konverter getauscht wird, ohne die Oberfläche anzufassen.
