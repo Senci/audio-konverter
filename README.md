@@ -14,11 +14,12 @@ flowchart LR
 - Select whole folders, subfolders are scanned, multiple folders possible
 - Sources: FLAC, WAV, AIFF, MP3
 - Target via dropdown: **AIFF** (16 bit, 44.1 kHz) or **MP3** (320 kbit/s, 44.1 kHz)
-- Table with path, conversion and status, same folder = same row color
+- Table with number, file, path, conversion and status, same folder = same row color
 - Checkbox per file to exclude it
 - Locked: MP3 sources always, AIFF sources when the target is AIFF
 - Output is saved in the source folder, originals and existing target files stay untouched
 - Start, cancel and progress bar
+- CSV log of all files (download button after a run), separated by semicolons
 
 ## Requirements
 
@@ -53,13 +54,12 @@ audio-konverter/
 │   ├── gui.rs        Oberfläche
 │   ├── scan.rs       Ordner durchsuchen
 │   ├── convert.rs    Umwandlung (ffmpeg)
-│   └── bericht.rs    Protokoll (noch leer)
+│   └── bericht.rs    CSV-Protokoll
 └── wiki/             features, decisions, diagrams (German)
 ```
 
 ## Planned
 
-- Log of converted files
 - Image search and cover art in AIFF metadata, window for folders without an image
 - Built-in converter instead of ffmpeg
 - Standalone file, later macOS and Linux

@@ -32,6 +32,21 @@ pub struct Datei {
     pub farbe: usize, // 0 oder 1 (Zeilenfarbe)
 }
 
+impl Datei {
+    // Quellformat für Tabelle und Protokoll, z. B. "FLAC"
+    pub fn von(&self) -> String {
+        self.endung.to_uppercase()
+    }
+    // Zielformat für Tabelle und Protokoll ("-" bei MP3-Quellen, die nie umgewandelt werden)
+    pub fn nach(&self, ziel: Ziel) -> &'static str {
+        if self.endung == "mp3" {
+            "-"
+        } else {
+            ziel.kurz()
+        }
+    }
+}
+
 pub struct App {
     pub ordner: Vec<PathBuf>, // gewählte Quellordner
     pub dateien: Vec<Datei>,  // alle gefundenen Dateien
@@ -40,6 +55,8 @@ pub struct App {
     pub laeuft: bool,
     pub gesamt: usize,   // Anzahl Aufträge im aktuellen Lauf
     pub erledigt: usize, // davon abgeschlossen
+    pub protokoll_bereit: bool, // Protokoll gibt es erst nach einem Lauf
+    pub meldung: Option<String>, // Hinweis unten, z. B. „Protokoll gespeichert“
     rx: Option<Receiver<Msg>>,
     abbruch: Arc<AtomicBool>,
 }
@@ -54,6 +71,8 @@ impl App {
             laeuft: false,
             gesamt: 0,
             erledigt: 0,
+            protokoll_bereit: false,
+            meldung: None,
             rx: None,
             abbruch: Arc::new(AtomicBool::new(false)),
         }
@@ -115,6 +134,7 @@ impl App {
 
     // Status bestimmen: gesperrt / existiert bereits / bereit
     pub fn aktualisiere_status(&mut self) {
+        self.protokoll_bereit = false; // Protokoll passt nicht mehr zur Liste
         let ziel = self.ziel;
         for d in self.dateien.iter_mut() {
             let neu = if ist_gesperrt(&d.endung, ziel) {
@@ -162,6 +182,8 @@ impl App {
         self.gesamt = auftraege.len();
         self.erledigt = 0;
         self.laeuft = true;
+        self.protokoll_bereit = false;
+        self.meldung = None;
         self.abbruch = Arc::new(AtomicBool::new(false));
 
         let (tx, rx) = channel();
@@ -191,6 +213,7 @@ impl App {
                 }
                 Msg::Ende => {
                     self.laeuft = false;
+                    self.protokoll_bereit = true;
                     self.rx = None;
                     // Nicht gestartete Dateien (nach Abbruch) wieder freigeben
                     for d in self.dateien.iter_mut() {

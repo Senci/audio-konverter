@@ -2,17 +2,19 @@
 
 - Ganze Ordner wählen, Unterordner werden durchsucht, mehrere Ordner möglich
 - Quellen: FLAC, WAV, AIFF, MP3
-- Tabelle: Datei, Pfad, Von nach, Status; gleicher Ordner = gleiche Zeilenfarbe
+- Tabelle: Nr, Datei, Pfad, Von, Nach, Status; gleicher Ordner = gleiche Zeilenfarbe
+- Nr zählt ab 1, die Gesamtzahl steht oben
 - Häkchen pro Datei zum Ausnehmen
 - Zielformat per Dropdown: AIFF 16 Bit 44,1 kHz oder MP3 320 kbit/s 44,1 kHz
 - Ziel liegt im Ordner der Quelle, Originale bleiben unverändert
 - Start, Abbrechen, Fortschrittsbalken; Fehlertext per Mouseover
+- Protokoll als CSV (Knopf nach einem Lauf): `nr;datei;Ordner/Pfad;von;nach;status`
 
 ## Ablauf (mit Modulen)
 
 ```mermaid
 flowchart LR
-    A["Ordner wählen<br/>gui.rs"] --> B["Dateien suchen<br/>scan.rs"] --> C["Sperren und Status<br/>app.rs"] --> D["Start<br/>app.rs"] --> E["ffmpeg pro Datei<br/>convert.rs"] --> F["Status und Fortschritt<br/>app.rs, gui.rs"]
+    A["Ordner wählen<br/>gui.rs"] --> B["Dateien suchen<br/>scan.rs"] --> C["Sperren und Status<br/>app.rs"] --> D["Start<br/>app.rs"] --> E["ffmpeg pro Datei<br/>convert.rs"] --> F["Status und Fortschritt<br/>app.rs, gui.rs"] --> G["CSV-Protokoll<br/>bericht.rs"]
 ```
 
 ## Sperren

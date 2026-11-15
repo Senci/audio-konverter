@@ -12,7 +12,11 @@
 | MP3 mit ID3v2.3 | beste Player-Kompatibilität |
 | Dither beim Runterrechnen auf 16 Bit | saubereres Ergebnis |
 | Code in Module aufgeteilt | eine `main.rs` wäre mit den offenen Punkten zu groß geworden |
-| `bericht.rs` zunächst leer | YAGNI, Datei existiert nur als Platzhalter |
+| Nr zählt alle Zeilen | gesperrte Dateien bleiben sichtbar, Nr passt zur Gesamtzahl |
+| CSV mit Semikolon, ohne Anführungszeichen | deutsches Excel öffnet das direkt in Spalten |
+| Semikolon im Text wird zu Komma | sonst verrutschen die Spalten |
+| BOM am Dateianfang | Umlaute in Excel korrekt |
+| Protokoll-Knopf erst nach einem Lauf | ein Protokoll ohne Lauf wäre leer |
 
 ## Module
 
@@ -22,7 +26,7 @@ flowchart LR
     A --> G["gui.rs"]
     A --> S["scan.rs"]
     A --> C["convert.rs"]
-    A -.-> B["bericht.rs"]
+    G --> B["bericht.rs"]
 ```
 
 | Modul | Inhalt |
@@ -32,6 +36,6 @@ flowchart LR
 | `gui.rs` | Seitenleiste, Tabelle, Fußleiste, Farben, Statustexte |
 | `scan.rs` | liefert nur Pfade, `app.rs` baut daraus `Datei` |
 | `convert.rs` | `Ziel`, `Msg`, Sperrregel, ffmpeg-Suche, Thread, Aufruf |
-| `bericht.rs` | Platzhalter für das Protokoll |
+| `bericht.rs` | CSV-Protokoll erzeugen und speichern |
 
 `convert.rs` ist die Stelle, an der ffmpeg später durch den eigenen Konverter getauscht wird, ohne die Oberfläche anzufassen.

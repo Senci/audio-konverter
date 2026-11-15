@@ -1,6 +1,6 @@
 # Audio-Konverter – Wiki
 
-Windows-11-Programm (Rust, egui): wandelt ganze Ordner mit FLAC, WAV, AIFF, MP3 in AIFF (16 Bit, 44,1 kHz) oder MP3 (320 kbit/s) um, für den Pioneer XDJ-700. Umwandlung aktuell per ffmpeg.
+Windows-11-Programm (Rust, egui): wandelt ganze Ordner mit FLAC, WAV, AIFF, MP3 in AIFF (16 Bit, 44,1 kHz) oder MP3 (320 kbit/s) um, für den Pioneer XDJ-700. Umwandlung aktuell per ffmpeg. Protokoll als CSV.
 
 ```mermaid
 flowchart TD
@@ -8,7 +8,7 @@ flowchart TD
     app --> gui["gui.rs"]
     app --> scan["scan.rs"]
     app --> convert["convert.rs"]
-    app -.-> bericht["bericht.rs (noch leer)"]
+    gui --> bericht["bericht.rs (CSV)"]
     convert --> ffmpeg["ffmpeg.exe"]
     ffmpeg -.->|später ersetzt durch| eigen["eigener Konverter"]
 ```
