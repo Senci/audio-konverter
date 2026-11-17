@@ -1,5 +1,5 @@
-// Oberfläche: Seitenleiste, Tabelle, Fußleiste.
-// Später kommt hier das Extra-Fenster für Ordner ohne Bilddatei dazu.
+// Oberfläche: Seitenleiste, Tabelle, Fußleiste, Bilderliste.
+// Später kommt hier das Extra-Fenster für Ordner ohne Bilddatei dazu (Punkt 4).
 
 use crate::app::{App, Status};
 use crate::bericht;
@@ -201,6 +201,24 @@ impl App {
                 ));
             });
             ui.separator();
+
+            if !self.bilder.is_empty() {
+                egui::CollapsingHeader::new(format!(
+                    "Gefundene Bilder · {} (werden nie konvertiert)",
+                    self.bilder.len()
+                ))
+                .default_open(false)
+                .show(ui, |ui| {
+                    for (i, b) in self.bilder.iter().enumerate() {
+                        ui.horizontal(|ui| {
+                            ui.weak(format!("{}.", i + 1));
+                            ui.label(b.name.as_str());
+                            ui.weak(b.ordner.display().to_string());
+                        });
+                    }
+                });
+                ui.separator();
+            }
 
             egui::ScrollArea::both()
                 .auto_shrink([false, false])

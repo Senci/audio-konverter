@@ -32,6 +32,14 @@ pub struct Datei {
     pub farbe: usize, // 0 oder 1 (Zeilenfarbe)
 }
 
+// Eine gefundene Bilddatei (mögliches Cover). Wird nur gelistet, nie konvertiert.
+pub struct Bild {
+    pub pfad: PathBuf,
+    pub wurzel: PathBuf,
+    pub ordner: PathBuf,
+    pub name: String,
+}
+
 impl Datei {
     // Quellformat für Tabelle und Protokoll, z. B. "FLAC"
     pub fn von(&self) -> String {
@@ -50,6 +58,7 @@ impl Datei {
 pub struct App {
     pub ordner: Vec<PathBuf>, // gewählte Quellordner
     pub dateien: Vec<Datei>,  // alle gefundenen Dateien
+    pub bilder: Vec<Bild>,    // gefundene Bilddateien (nur Anzeige, Punkt 3)
     pub ziel: Ziel,
     pub ffmpeg: Option<PathBuf>,
     pub laeuft: bool,
@@ -66,6 +75,7 @@ impl App {
         Self {
             ordner: Vec::new(),
             dateien: Vec::new(),
+            bilder: Vec::new(),
             ziel: Ziel::Aiff,
             ffmpeg: finde_ffmpeg(),
             laeuft: false,
@@ -103,14 +113,31 @@ impl App {
                 farbe: 0,
             });
         }
+        for pfad in scan::bilddateien(&wurzel) {
+            if self.bilder.iter().any(|b| b.pfad == pfad) {
+                continue;
+            }
+            self.bilder.push(Bild {
+                ordner: pfad.parent().unwrap_or(&wurzel).to_path_buf(),
+                name: pfad
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_default(),
+                wurzel: wurzel.clone(),
+                pfad,
+            });
+        }
+        self.bilder.sort_by(|a, b| (&a.ordner, &a.name).cmp(&(&b.ordner, &b.name)));
+
         self.ordner.push(wurzel);
         self.neu_ordnen();
     }
 
-    // Quellordner samt seinen Dateien entfernen
+    // Quellordner samt seinen Dateien und Bildern entfernen
     pub fn ordner_entfernen(&mut self, index: usize) {
         let wurzel = self.ordner.remove(index);
         self.dateien.retain(|d| d.wurzel != wurzel);
+        self.bilder.retain(|b| b.wurzel != wurzel);
         self.neu_ordnen();
     }
 

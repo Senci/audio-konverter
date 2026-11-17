@@ -3,7 +3,7 @@
 ```mermaid
 flowchart LR
     M["7 Module (erledigt)"] --> P["1 Protokoll (umgesetzt)"]
-    M --> B["3 Bildersuche"]
+    M --> B["3 Bildersuche (umgesetzt)"]
     M --> K["5 Eigener Konverter"]
     M --> D["8 DJ-Player-Auswahl"]
     B --> C["2 Cover in AIFF"]
@@ -15,7 +15,7 @@ flowchart LR
 |---|---|---|---|
 | 1 | Protokoll als CSV | `bericht.rs` | umgesetzt, noch nicht getestet |
 | 2 | Cover in AIFF-Metadaten (Bild liegt im selben Ordner) | `convert.rs` | offen |
-| 3 | Bildersuche, Bilder werden gelistet, nie konvertiert | `scan.rs`, `gui.rs` | offen |
+| 3 | Bildersuche, Bilder werden gelistet, nie konvertiert | `scan.rs`, `gui.rs` | umgesetzt, noch nicht getestet |
 | 4 | Extra-Fenster: Ordner ohne Bilddatei | `gui.rs` | offen |
 | 5 | Eigener Konverter ersetzt ffmpeg | `convert.rs` | offen |
 | 6 | Standalone-Datei ohne Rust und ohne Installation | Build | offen |
