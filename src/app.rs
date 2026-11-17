@@ -1,6 +1,6 @@
 // Zustand und Ablaufsteuerung: Ordner, Dateiliste, Start, Abbruch.
 
-use crate::convert::{self, finde_ffmpeg, ist_gesperrt, Msg, Ziel};
+use crate::convert::{self, ist_gesperrt, Msg, Ziel};
 use crate::scan;
 use eframe::egui;
 use std::path::PathBuf;
@@ -60,7 +60,6 @@ pub struct App {
     pub dateien: Vec<Datei>,  // alle gefundenen Dateien
     pub bilder: Vec<Bild>,    // gefundene Bilddateien (nur Anzeige, Punkt 3)
     pub ziel: Ziel,
-    pub ffmpeg: Option<PathBuf>,
     pub laeuft: bool,
     pub gesamt: usize,   // Anzahl Aufträge im aktuellen Lauf
     pub erledigt: usize, // davon abgeschlossen
@@ -78,7 +77,6 @@ impl App {
             dateien: Vec::new(),
             bilder: Vec::new(),
             ziel: Ziel::Aiff,
-            ffmpeg: finde_ffmpeg(),
             laeuft: false,
             gesamt: 0,
             erledigt: 0,
@@ -183,8 +181,7 @@ impl App {
 
     // Darf der Start-Button aktiv sein?
     pub fn kann_starten(&self) -> bool {
-        self.ffmpeg.is_some()
-            && !self.laeuft
+        !self.laeuft
             && self
                 .dateien
                 .iter()
@@ -193,9 +190,6 @@ impl App {
 
     // Umwandlung der angehakten Dateien starten
     pub fn starten(&mut self, ctx: &egui::Context) {
-        let Some(ffmpeg) = self.ffmpeg.clone() else {
-            return;
-        };
         let ziel = self.ziel;
         let mut auftraege = Vec::new();
         for (i, d) in self.dateien.iter_mut().enumerate() {
@@ -217,7 +211,7 @@ impl App {
 
         let (tx, rx) = channel();
         self.rx = Some(rx);
-        convert::starte(ffmpeg, auftraege, ziel, self.abbruch.clone(), tx, ctx.clone());
+        convert::starte(auftraege, ziel, self.abbruch.clone(), tx, ctx.clone());
     }
 
     // Laufende Umwandlung abbrechen

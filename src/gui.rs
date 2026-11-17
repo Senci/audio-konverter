@@ -181,13 +181,6 @@ impl App {
             if let Some(m) = &self.meldung {
                 ui.label(m.as_str());
             }
-            if self.ffmpeg.is_none() {
-                ui.colored_label(
-                    Color32::from_rgb(220, 60, 60),
-                    "ffmpeg nicht gefunden: bitte ffmpeg.exe in den Projektordner (neben Cargo.toml) \
-                     oder neben die Programmdatei legen.",
-                );
-            }
             ui.add_space(6.0);
         });
     }

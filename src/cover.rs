@@ -1,5 +1,5 @@
 // Cover für AIFF-Metadaten: sucht ein Bild im selben Ordner wie die Quelldatei
-// und liefert die ffmpeg-Argumente zum Einbetten (Punkt 2 in offen.md).
+// (Punkt 2 in offen.md). Eingebettet wird es von tags.rs.
 
 use std::path::{Path, PathBuf};
 
