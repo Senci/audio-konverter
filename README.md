@@ -6,7 +6,7 @@ Windows desktop app with a graphical interface (Rust, egui) that converts whole 
 
 ```mermaid
 flowchart LR
-    A["Select folder"] --> B["Find files"] --> C["Choose target format"] --> D["Start"] --> E["ffmpeg per file"]
+    A["Select folder"] --> B["Find files"] --> C["Choose target format"] --> D["Start"] --> E["Convert per file"]
 ```
 
 ## Features
@@ -20,12 +20,15 @@ flowchart LR
 - Output is saved in the source folder, originals and existing target files stay untouched
 - Start, cancel and progress bar
 - CSV log of all files (download button after a run), separated by semicolons
+- Images are listed, never converted; button "Folders without image" shows folders without cover
+- AIFF output gets the first image from the source folder as cover art
 
 ## Requirements
 
 - Windows 11
-- [Rust](https://rustup.rs) (on Windows with the C++ Build Tools)
-- `ffmpeg.exe` from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/) (`ffmpeg-release-essentials.zip`, inside it `bin\ffmpeg.exe`)
+- [Rust](https://rustup.rs) (on Windows with the C++ Build Tools, they include the C compiler needed for the MP3 encoder)
+
+No ffmpeg needed.
 
 ## Run
 
@@ -34,35 +37,40 @@ git clone <repo-url>
 cd audio-konverter
 ```
 
-Put `ffmpeg.exe` next to `Cargo.toml`, then:
+Then:
 
 ```
-cargo run
+cargo run --release
 ```
 
-Release build: `cargo build --release`. The result is `target\release\audio-konverter.exe`, with `ffmpeg.exe` next to it.
+Use `--release` for real conversions. The debug build (`cargo run`) is much slower.
+
+Standalone build: `cargo build --release`. The result is `target\release\audio-konverter.exe`.
 
 ## Project structure
 
 ```
 audio-konverter/
 ├── Cargo.toml
-├── ffmpeg.exe        (not in Git)
 ├── src/
 │   ├── main.rs       Start
-│   ├── app.rs        Zustand, Ablauf
-│   ├── gui.rs        Oberfläche
-│   ├── scan.rs       Ordner durchsuchen
-│   ├── convert.rs    Umwandlung (ffmpeg)
-│   └── bericht.rs    CSV-Protokoll
+│   ├── app.rs        State, flow
+│   ├── gui.rs        User interface
+│   ├── scan.rs       Find audio and image files
+│   ├── convert.rs    Background thread, status
+│   ├── konverter.rs  Own converter: read, resample, 16 bit
+│   ├── aiff.rs       AIFF writer
+│   ├── mp3.rs        MP3 writer (LAME)
+│   ├── tags.rs       Tags and cover as ID3
+│   ├── cover.rs      Find cover in source folder
+│   └── bericht.rs    CSV log
 └── wiki/             features, decisions, diagrams (German)
 ```
 
 ## Planned
 
-- Image search and cover art in AIFF metadata, window for folders without an image
-- Built-in converter instead of ffmpeg
 - Standalone file, later macOS and Linux
+- DJ player selection with supported formats (Pioneer, Denon)
 
 Details in the [wiki](wiki/index.md).
 

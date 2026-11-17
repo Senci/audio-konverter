@@ -9,12 +9,15 @@
 - Ziel liegt im Ordner der Quelle, Originale bleiben unverändert
 - Start, Abbrechen, Fortschrittsbalken; Fehlertext per Mouseover
 - Protokoll als CSV (Knopf nach einem Lauf): `nr;datei;Ordner/Pfad;von;nach;status`
+- Gefundene Bilder werden aufgelistet (einklappbar), nie konvertiert
+- Knopf „Ordner ohne Bild“ öffnet ein Fenster mit Ordnern ohne Cover
+- Bei AIFF wird das erste Bild im Quellordner als Cover eingebettet
 
-## Ablauf (mit Modulen)
+## Ablauf
 
 ```mermaid
 flowchart LR
-    A["Ordner wählen<br/>gui.rs"] --> B["Dateien suchen<br/>scan.rs"] --> C["Sperren und Status<br/>app.rs"] --> D["Start<br/>app.rs"] --> E["ffmpeg pro Datei<br/>convert.rs"] --> F["Status und Fortschritt<br/>app.rs, gui.rs"] --> G["CSV-Protokoll<br/>bericht.rs"]
+    A["Ordner wählen<br/>gui.rs"] --> B["Dateien und Bilder suchen<br/>scan.rs"] --> C["Sperren und Status<br/>app.rs"] --> D["Start<br/>app.rs"] --> E["Konverter pro Datei<br/>convert.rs, konverter.rs"] --> F["Status und Fortschritt<br/>app.rs, gui.rs"] --> G["CSV-Protokoll<br/>bericht.rs"]
 ```
 
 ## Sperren
@@ -32,10 +35,13 @@ flowchart TD
 
 Die Regel steht in `convert.rs` (`ist_gesperrt`), die Statusvergabe in `app.rs`.
 
-## ffmpeg-Befehle
+## Umwandlung
 
-| Ziel | Optionen |
-|---|---|
-| AIFF | `-af aresample=osr=44100:osf=s16:dither_method=triangular -c:a pcm_s16be -write_id3v2 1` |
-| MP3 | `-ar 44100 -c:a libmp3lame -b:a 320k -id3v2_version 3` |
-| beide | `-n -nostdin -loglevel error -i quelle -vn ziel` |
+```mermaid
+flowchart LR
+    Q["Quelle<br/>FLAC, WAV, AIFF"] --> L["lesen<br/>symphonia"] --> R["auf 44,1 kHz<br/>rubato"] --> D["auf 16 Bit<br/>Dither nur bei AIFF"] --> Z{"Ziel"}
+    Z -->|AIFF| A["aiff.rs"]
+    Z -->|MP3| M["mp3.rs, LAME 320 kbit/s"]
+    T["tags.rs: Tags + Cover"] --> A
+    T --> M
+```
