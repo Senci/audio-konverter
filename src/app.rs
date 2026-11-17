@@ -66,6 +66,7 @@ pub struct App {
     pub erledigt: usize, // davon abgeschlossen
     pub protokoll_bereit: bool, // Protokoll gibt es erst nach einem Lauf
     pub meldung: Option<String>, // Hinweis unten, z. B. „Protokoll gespeichert“
+    pub zeige_ordner_ohne_bild: bool, // Extra-Fenster an/aus (Punkt 4)
     rx: Option<Receiver<Msg>>,
     abbruch: Arc<AtomicBool>,
 }
@@ -83,6 +84,7 @@ impl App {
             erledigt: 0,
             protokoll_bereit: false,
             meldung: None,
+            zeige_ordner_ohne_bild: false,
             rx: None,
             abbruch: Arc::new(AtomicBool::new(false)),
         }
@@ -221,6 +223,21 @@ impl App {
     // Laufende Umwandlung abbrechen
     pub fn abbrechen(&mut self) {
         self.abbruch.store(true, Ordering::Relaxed);
+    }
+
+    // Alle Unterordner mit Audiodateien, die kein Bild (Cover) enthalten (Punkt 4)
+    pub fn ordner_ohne_bild(&self) -> Vec<&PathBuf> {
+        let mit_bild: std::collections::HashSet<&PathBuf> =
+            self.bilder.iter().map(|b| &b.ordner).collect();
+        let mut treffer: Vec<&PathBuf> = self
+            .dateien
+            .iter()
+            .map(|d| &d.ordner)
+            .filter(|o| !mit_bild.contains(o))
+            .collect();
+        treffer.sort();
+        treffer.dedup();
+        treffer
     }
 
     // Nachrichten des Threads abholen und Tabelle aktualisieren

@@ -1,6 +1,7 @@
 // Umwandlung: aktuell mit ffmpeg. Später kann hier der eigene Konverter
 // ffmpeg ersetzen, ohne dass die Oberfläche angepasst werden muss.
 
+use crate::cover;
 use eframe::egui;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -88,7 +89,13 @@ pub fn starte(
             }
             let _ = tx.send(Msg::Laeuft(i));
             ctx.request_repaint();
-            let msg = match konvertiere(&ffmpeg, &quelle, &ziel_pfad, ziel, &abbruch) {
+            // Bei AIFF: Cover aus dem Quellordner suchen und einbetten (Punkt 2)
+            let bild = if ziel == Ziel::Aiff {
+                quelle.parent().and_then(cover::suche)
+            } else {
+                None
+            };
+            let msg = match konvertiere(&ffmpeg, &quelle, &ziel_pfad, ziel, bild.as_deref(), &abbruch) {
                 Ok(()) => Msg::Fertig(i),
                 Err(e) => Msg::Fehler(i, e),
             };
@@ -100,12 +107,14 @@ pub fn starte(
     });
 }
 
-// Eine Datei mit ffmpeg umwandeln
+// Eine Datei mit ffmpeg umwandeln. `bild` ist ein Cover, das bei AIFF
+// in die Metadaten eingebettet wird (Punkt 2 in offen.md); bei MP3 ungenutzt.
 fn konvertiere(
     ffmpeg: &Path,
     quelle: &Path,
     ziel: &Path,
     format: Ziel,
+    bild: Option<&Path>,
     abbruch: &AtomicBool,
 ) -> Result<(), String> {
     // Vorhandene Dateien niemals anfassen
@@ -113,32 +122,54 @@ fn konvertiere(
         return Err("Zieldatei existiert bereits".into());
     }
 
+    let hat_cover = format == Ziel::Aiff && bild.is_some();
+
     let mut cmd = Command::new(ffmpeg);
-    cmd.args(["-n", "-nostdin", "-loglevel", "error", "-i"])
-        .arg(quelle)
-        .arg("-vn"); // Cover-Bilder weglassen
+    cmd.args(["-n", "-nostdin", "-loglevel", "error", "-i"]).arg(quelle);
+    if let Some(b) = bild.filter(|_| hat_cover) {
+        cmd.arg("-i").arg(b); // zweiter Input: das Cover-Bild
+    } else {
+        cmd.arg("-vn"); // keine Cover-Bilder aus der Quelle übernehmen
+    }
 
     match format {
         // AIFF 16 Bit, 44,1 kHz (mit Dither beim Runterrechnen von 24 Bit)
-        Ziel::Aiff => cmd.args([
-            "-af",
-            "aresample=osr=44100:osf=s16:dither_method=triangular",
-            "-c:a",
-            "pcm_s16be",
-            "-write_id3v2",
-            "1",
-        ]),
+        Ziel::Aiff => {
+            cmd.args([
+                "-map",
+                "0:a",
+                "-af",
+                "aresample=osr=44100:osf=s16:dither_method=triangular",
+                "-c:a",
+                "pcm_s16be",
+                "-write_id3v2",
+                "1",
+            ]);
+            if hat_cover {
+                // Cover als angehängtes Bild in die ID3-Metadaten einbetten
+                cmd.args([
+                    "-map",
+                    "1:v",
+                    "-c:v",
+                    "mjpeg",
+                    "-disposition:v:0",
+                    "attached_pic",
+                ]);
+            }
+        }
         // MP3 320 kbit/s, 44,1 kHz, ID3v2.3 (am besten kompatibel)
-        Ziel::Mp3 => cmd.args([
-            "-ar",
-            "44100",
-            "-c:a",
-            "libmp3lame",
-            "-b:a",
-            "320k",
-            "-id3v2_version",
-            "3",
-        ]),
+        Ziel::Mp3 => {
+            cmd.args([
+                "-ar",
+                "44100",
+                "-c:a",
+                "libmp3lame",
+                "-b:a",
+                "320k",
+                "-id3v2_version",
+                "3",
+            ]);
+        }
     };
     cmd.arg(ziel).stdout(Stdio::null()).stderr(Stdio::piped());
 

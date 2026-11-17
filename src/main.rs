@@ -2,8 +2,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app; // Zustand und Ablaufsteuerung
-mod bericht; // Protokoll (noch leer)
+mod bericht; // CSV-Protokoll
 mod convert; // Umwandlung (ffmpeg)
+mod cover; // Cover-Suche für AIFF-Metadaten
 mod gui; // Oberfläche
 mod scan; // Ordner durchsuchen
 

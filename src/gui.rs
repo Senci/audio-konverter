@@ -1,5 +1,4 @@
-// Oberfläche: Seitenleiste, Tabelle, Fußleiste, Bilderliste.
-// Später kommt hier das Extra-Fenster für Ordner ohne Bilddatei dazu (Punkt 4).
+// Oberfläche: Seitenleiste, Tabelle, Fußleiste, Bilderliste, Fenster „Ordner ohne Bild“.
 
 use crate::app::{App, Status};
 use crate::bericht;
@@ -163,6 +162,14 @@ impl App {
                 {
                     self.protokoll_speichern();
                 }
+                // Fenster mit Ordnern ohne Bild (Punkt 4)
+                let anzahl_ohne_bild = self.ordner_ohne_bild().len();
+                if ui
+                    .button(format!("Ordner ohne Bild · {anzahl_ohne_bild}"))
+                    .clicked()
+                {
+                    self.zeige_ordner_ohne_bild = true;
+                }
                 let anteil = if self.gesamt == 0 {
                     0.0
                 } else {
@@ -183,6 +190,32 @@ impl App {
             }
             ui.add_space(6.0);
         });
+    }
+
+    // Extra-Fenster: Ordner, die Audiodateien aber kein Bild (Cover) enthalten
+    fn fenster_ordner_ohne_bild(&mut self, ctx: &egui::Context) {
+        if !self.zeige_ordner_ohne_bild {
+            return;
+        }
+        let ordner = self.ordner_ohne_bild();
+        let mut offen = true;
+        egui::Window::new("Ordner ohne Bild")
+            .open(&mut offen)
+            .default_width(420.0)
+            .show(ctx, |ui| {
+                if ordner.is_empty() {
+                    ui.label("Alle Ordner mit Audiodateien enthalten ein Bild.");
+                } else {
+                    ui.label(format!("{} Ordner ohne Bild (Cover):", ordner.len()));
+                    ui.separator();
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        for o in ordner {
+                            ui.label(o.display().to_string());
+                        }
+                    });
+                }
+            });
+        self.zeige_ordner_ohne_bild = offen;
     }
 
     // Mitte: Tabelle der Dateien
@@ -293,5 +326,6 @@ impl eframe::App for App {
         self.seitenleiste(ctx);
         self.fussleiste(ctx);
         self.tabelle(ctx);
+        self.fenster_ordner_ohne_bild(ctx);
     }
 }

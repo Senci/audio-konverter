@@ -2,25 +2,26 @@
 
 ```mermaid
 flowchart LR
-    M["7 Module (erledigt)"] --> P["1 Protokoll (umgesetzt)"]
-    M --> B["3 Bildersuche (umgesetzt)"]
+    M["7 Module (erledigt)"] --> P["1 Protokoll (erledigt)"]
+    M --> B["3 Bildersuche (erledigt)"]
     M --> K["5 Eigener Konverter"]
     M --> D["8 DJ-Player-Auswahl"]
-    B --> C["2 Cover in AIFF"]
-    B --> N["4 Fenster: Ordner ohne Bild"]
+    B --> C["2 Cover in AIFF (erledigt)"]
+    B --> N["4 Fenster: Ordner ohne Bild (erledigt)"]
     K --> S["6 Standalone-Datei"]
 ```
 
 | Nr. | Punkt | Modul | Stand |
 |---|---|---|---|
-| 1 | Protokoll als CSV | `bericht.rs` | erledigt |
-| 2 | Cover in AIFF-Metadaten (Bild liegt im selben Ordner) | `convert.rs` | offen |
-| 3 | Bildersuche, Bilder werden gelistet, nie konvertiert | `scan.rs`, `gui.rs` | erledigt |
-| 4 | Extra-Fenster: Ordner ohne Bilddatei | `gui.rs` | offen |
 | 5 | Eigener Konverter ersetzt ffmpeg | `convert.rs` | offen |
 | 6 | Standalone-Datei ohne Rust und ohne Installation | Build | offen |
-| 7 | Code in Module aufteilen | | erledigt |
 | 8 | DJ-Player (DJ-Controller) auswählbar, zeigt die unterstützten Formate. Pioneer- und Denon-Player | `player.rs`, `gui.rs` | offen |
+
+Erledigt: 1 Protokoll als CSV, 2 Cover in AIFF-Metadaten, 3 Bildersuche (gelistet, nie konvertiert), 4 Fenster „Ordner ohne Bild“, 7 Aufteilung in Module.
+
+Zu Punkt 2: Das erste Bild (alphabetisch) im Ordner der Quelldatei wird als AIFF-Cover eingebettet (`cover.rs`, genutzt von `convert.rs`). Nur bei Ziel AIFF, noch nicht getestet.
+
+Zu Punkt 4: Der Knopf „Ordner ohne Bild“ in der Fußleiste öffnet ein Fenster mit allen Ordnern, die Audiodateien aber kein Bild enthalten. Noch nicht getestet.
 
 Außerdem später: Builds für macOS und Linux Mint über GitHub Actions.
 
