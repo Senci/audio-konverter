@@ -13,9 +13,9 @@ flowchart LR
 
 | Nr. | Punkt | Modul | Stand |
 |---|---|---|---|
-| 1 | Protokoll als CSV | `bericht.rs` | umgesetzt, noch nicht getestet |
+| 1 | Protokoll als CSV | `bericht.rs` | erledigt |
 | 2 | Cover in AIFF-Metadaten (Bild liegt im selben Ordner) | `convert.rs` | offen |
-| 3 | Bildersuche, Bilder werden gelistet, nie konvertiert | `scan.rs`, `gui.rs` | umgesetzt, noch nicht getestet |
+| 3 | Bildersuche, Bilder werden gelistet, nie konvertiert | `scan.rs`, `gui.rs` | erledigt |
 | 4 | Extra-Fenster: Ordner ohne Bilddatei | `gui.rs` | offen |
 | 5 | Eigener Konverter ersetzt ffmpeg | `convert.rs` | offen |
 | 6 | Standalone-Datei ohne Rust und ohne Installation | Build | offen |
