@@ -20,6 +20,7 @@
 | BOM am Dateianfang | Umlaute in Excel korrekt |
 | Protokoll-Knopf erst nach einem Lauf | ein Protokoll ohne Lauf wäre leer |
 | Mehrere Dateien gleichzeitig, ein Thread pro Kern | LAME nutzt nur einen Kern; 60 Tracks nach MP3 dauerten 6:30 min |
+| Release mit `lto`, `codegen-units = 1`, `strip`; C-Laufzeit fest eingebaut; Build per GitHub Actions | eine `.exe` ohne Rust und ohne Visual-C++-Runtime; der Build braucht keinen Rust-PC. Kein `panic = "abort"`, weil die Umwandlung Abstürze abfängt (`catch_unwind`) |
 | Standalone-Datei wie `cargo run --release` | Messung: 60 Tracks (WAV und FLAC) nach AIFF in 19 s im Release-Build. Im Debug-Build ist der eigene Konverter deutlich langsamer. Die Standalone-Datei muss also optimiert gebaut werden. |
 | Ziel mit `create_new` anlegen, nur selbst angelegte Dateien löschen | nie überschreiben; bei parallelen Aufträgen mit gleichem Ziel (`a.wav` und `a.flac`) wird nie eine fremde Datei gelöscht |
 | Abgebrochene Datei wird wieder „bereit“ | sie wurde gelöscht, ist also kein Fehler |

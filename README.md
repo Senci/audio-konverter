@@ -33,7 +33,7 @@ cd audio-konverter
 cargo run --release
 ```
 
-Always use `--release` for real conversions. Tests: `cargo test --release`. Standalone build: `cargo build --release`, result `target\release\audio-konverter.exe`.
+Always use `--release` for real conversions. Tests: `cargo test --release`. Standalone build: `cargo build --release`, result `target\release\audio-konverter.exe` (single file, no Rust, no installation needed). Without Rust on your PC: on GitHub under *Actions → Windows-Build → Run workflow*, the `.exe` is the download of the run; a tag like `v0.4.0` also creates a release.
 
 ## Project structure
 
@@ -60,6 +60,6 @@ audio-konverter/
 
 ## Planned
 
-- Standalone file, later macOS and Linux
+- Later macOS and Linux
 
 Details in the [wiki](wiki/index.md). Always test with copies of your files.

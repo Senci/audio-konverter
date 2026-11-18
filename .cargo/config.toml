@@ -1,0 +1,3 @@
+# Windows: C-Laufzeit fest einbauen, damit die .exe ohne Visual-C++-Runtime startet
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]

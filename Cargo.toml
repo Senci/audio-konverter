@@ -18,3 +18,9 @@ flacenc = { version = "0.5.1", default-features = false }   # FLAC schreiben (re
 # trotzdem `cargo run --release` verwenden (siehe wiki/bekannte-probleme.md).
 [profile.dev.package."*"]
 opt-level = 3
+
+# Fertige Datei: voll optimiert, klein. Kein panic = "abort", die Umwandlung fängt Abstürze ab.
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

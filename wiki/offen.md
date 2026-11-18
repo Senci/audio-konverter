@@ -2,12 +2,12 @@
 
 ```mermaid
 flowchart LR
-    S["6 Standalone-Datei (offen)"]
+    S["6 Standalone-Datei (umgesetzt, nicht getestet)"]
 ```
 
 | Nr. | Punkt | Modul | Stand |
 |---|---|---|---|
-| 6 | Standalone-Datei ohne Rust und ohne Installation, muss wie `cargo run --release` schnell laufen | Build | offen |
+| 6 | Standalone-Datei ohne Rust und ohne Installation, muss wie `cargo run --release` schnell laufen | Build | umgesetzt, `.exe` von dir noch nicht getestet |
 
 ## Erledigt
 
@@ -24,5 +24,7 @@ flowchart LR
 | 10 | MP3-Umwandlung beschleunigen (60 Tracks WAV/FLAC nach MP3: 34 s) | `auftraege.rs` |
 | 11 | Umwandlung nach FLAC (16 Bit, 44,1 kHz) | `konverter.rs`, `flac.rs`, `tags.rs` |
 | 12 | Sprachauswahl Deutsch / Englisch | `texte.rs`, `gui.rs` |
+
+Zu Punkt 6: `Cargo.toml` (Release mit `lto`, `codegen-units = 1`, `strip`), `.cargo/config.toml` (C-Laufzeit fest eingebaut, keine Visual-C++-Runtime nötig), `.github/workflows/windows.yml` (baut und testet auf GitHub, `.exe` als Download, bei Tag `v*` als Release). Im Sandbox-Test (Linux, 12 Dateien à 30 s, 96 kHz/24 Bit): AIFF 0,3 s, FLAC 0,8 s, MP3 2,3 s; alle 18 Tests grün. Die Windows-`.exe` selbst konnte ich hier nicht bauen.
 
 Später: Builds für macOS und Linux Mint über GitHub Actions.

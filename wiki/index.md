@@ -34,6 +34,7 @@ flowchart LR
 audio-konverter/
 ├── Cargo.toml, Cargo.lock
 ├── assets/icons/     Lucide-Icons (SVG)
+├── .cargo/config.toml, .github/workflows/windows.yml   Build der Windows-.exe
 ├── src/              main, app, gui, icons, texte, scan, auftraege, konverter, aiff, mp3, flac, tags, bericht
 └── wiki/
 ```
