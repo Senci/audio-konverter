@@ -9,7 +9,7 @@
 - Mehrere Dateien gleichzeitig (ein Thread pro CPU-Kern), Abbrechen jederzeit
 - Ziel liegt im Ordner der Quelle; Originale und vorhandene Dateien werden nie verändert
 - Nach dem Lauf: Zusammenfassung in der Statusleiste, Protokoll als CSV (`nr;datei;Ordner/Pfad;von;nach;status`)
-- Fenster „Cover“: Ordner ohne Bild und alle gefundenen Bilder; bei AIFF wird das erste Bild eines Ordners eingebettet
+- Fenster „Cover“: Ordner ohne Bild und alle gefundenen Bilder; das erste Bild eines Ordners wird in AIFF und MP3 eingebettet
 - Tags (Titel, Künstler, Album, Album-Künstler, Genre, Jahr, Track, Disc, Komponist, BPM, Label) werden übernommen
 - Helles und dunkles Systemthema, Lucide-Icons
 

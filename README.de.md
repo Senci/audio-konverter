@@ -16,7 +16,7 @@ flowchart LR
 - Kompakte Tabelle: Häkchen, Nr, Datei, kurzer Ordnerpfad, Format, Status mit Icon; alle an/aus im Kopf
 - Mehrere Dateien gleichzeitig (ein Thread pro CPU-Kern), Abbrechen jederzeit
 - Ergebnis neben der Quelle; Originale und vorhandene Dateien bleiben unverändert
-- Tags werden übernommen; bei AIFF wird das erste Bild eines Ordners als Cover eingebettet
+- Tags werden übernommen; das erste Bild eines Ordners wird als Cover eingebettet (AIFF und MP3)
 - Fenster „Cover“: Ordner ohne Cover und alle gefundenen Bilder
 - CSV-Protokoll nach dem Lauf, helles und dunkles Thema, Lucide-Icons
 
@@ -60,6 +60,5 @@ audio-konverter/
 
 - Standalone-Datei, später macOS und Linux
 - DJ-Player-Auswahl mit unterstützten Formaten (Pioneer, Denon)
-- Cover auch in MP3
 
 Details im [Wiki](wiki/index.md). Immer mit Kopien der Dateien testen.

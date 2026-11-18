@@ -256,9 +256,7 @@ impl App {
                     index,
                     quelle: d.pfad.clone(),
                     ziel_pfad: d.pfad.with_extension(ziel.endung()),
-                    cover: (ziel == Ziel::Aiff)
-                        .then(|| self.cover_fuer(&d.ordner))
-                        .flatten(),
+                    cover: self.cover_fuer(&d.ordner),
                 });
             }
         }

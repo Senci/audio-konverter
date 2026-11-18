@@ -518,6 +518,26 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn cover_landet_im_mp3() {
+        let o = ordner("cover-mp3");
+        let quelle = o.join("a.wav");
+        wav(&quelle, 44_100, 16, 0.1);
+        let bild = o.join("cover.jpg");
+        std::fs::write(&bild, b"\xFF\xD8\xFF\xE0 kein echtes Bild").unwrap();
+        wandle(
+            &quelle,
+            &o.join("a.mp3"),
+            Ziel::Mp3,
+            Some(&bild),
+            &nie_abbrechen(),
+        )
+        .unwrap();
+        let d = std::fs::read(o.join("a.mp3")).unwrap();
+        assert_eq!(&d[0..3], b"ID3");
+        assert!(d.windows(4).any(|w| w == b"APIC"));
+    }
+
+    #[test]
     fn vorhandene_zieldatei_bleibt_unangetastet() {
         let o = ordner("vorhanden");
         let quelle = o.join("a.wav");

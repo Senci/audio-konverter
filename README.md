@@ -16,7 +16,7 @@ flowchart LR
 - Compact table: checkbox, number, file, short folder path, format, status with icon; select all in the header
 - Several files at once (one thread per CPU core), cancel at any time
 - Output next to the source; originals and existing files are never touched
-- Tags are copied; for AIFF the first image of a folder is embedded as cover
+- Tags are copied; the first image of a folder is embedded as cover (AIFF and MP3)
 - "Cover" window: folders without cover and all found images
 - CSV log after a run, light and dark theme, Lucide icons
 
@@ -60,6 +60,5 @@ audio-konverter/
 
 - Standalone file, later macOS and Linux
 - DJ player selection with supported formats (Pioneer, Denon)
-- Cover art in MP3 too
 
 Details in the [wiki](wiki/index.md). Always test with copies of your files.
