@@ -2,6 +2,7 @@
 
 use crate::app::{Datei, Status};
 use crate::konverter::Ziel;
+use crate::texte::t;
 use std::path::Path;
 
 const TRENNER: &str = ";";
@@ -14,8 +15,8 @@ fn feld(text: &str) -> String {
 // Statuswert für das Protokoll
 fn status_fuer_protokoll(d: &Datei) -> String {
     match &d.status {
-        Status::Bereit if !d.gewaehlt => "nicht gewählt".to_string(),
-        Status::Fehler(e) => format!("Fehler: {e}"),
+        Status::Bereit if !d.gewaehlt => t().nicht_gewaehlt.to_string(),
+        Status::Fehler(e) => format!("{}: {e}", t().fehler_praefix),
         s => s.text().to_string(),
     }
 }
@@ -24,7 +25,7 @@ fn status_fuer_protokoll(d: &Datei) -> String {
 pub fn erstelle(dateien: &[Datei], ziel: Ziel) -> String {
     // BOM am Anfang, damit Excel Umlaute richtig anzeigt
     let mut csv = String::from("\u{FEFF}");
-    csv.push_str(&["nr", "datei", "Ordner/Pfad", "von", "nach", "status"].join(TRENNER));
+    csv.push_str(t().csv_kopf);
     csv.push_str("\r\n");
     for (i, d) in dateien.iter().enumerate() {
         let felder = [

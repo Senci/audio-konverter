@@ -1,6 +1,7 @@
 // MP3-Schreiber: LAME ist im Programm eingebaut (kein ffmpeg nötig).
 // 320 kbit/s, 44,1 kHz. Ein ID3-Tag kommt vor die MP3-Daten.
 
+use crate::texte::t;
 use mp3lame_encoder::{
     max_required_buffer_size, Bitrate, Builder, Encoder, FlushNoGap, InterleavedPcm, MonoPcm,
     Quality,
@@ -16,12 +17,12 @@ pub struct Mp3Schreiber {
 }
 
 fn fehler(e: impl std::fmt::Debug) -> String {
-    format!("MP3-Encoder: {e:?}")
+    format!("{}: {e:?}", t().mp3_encoder)
 }
 
 impl Mp3Schreiber {
     pub fn neu(datei: File, kanaele: u8, id3: &[u8]) -> Result<Self, String> {
-        let mut b = Builder::new().ok_or("MP3-Encoder konnte nicht gestartet werden")?;
+        let mut b = Builder::new().ok_or(t().mp3_encoder_start)?;
         b.set_num_channels(kanaele).map_err(fehler)?;
         b.set_sample_rate(44_100).map_err(fehler)?;
         b.set_brate(Bitrate::Kbps320).map_err(fehler)?;

@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-Windows-Programm (Rust, egui), das ganze Ordner mit Audiodateien umwandelt, zum Beispiel für den Pioneer XDJ-700 (spielt AIFF und MP3, kein FLAC). Eigener Konverter eingebaut, kein ffmpeg nötig.
+Windows-Programm (Rust, egui), das ganze Ordner mit Audiodateien umwandelt, zum Beispiel für den Pioneer XDJ-700 (spielt AIFF und MP3, kein FLAC). Eigener Konverter eingebaut, kein ffmpeg nötig. Oberfläche auf Deutsch und Englisch.
 
 ```mermaid
 flowchart LR
@@ -12,13 +12,13 @@ flowchart LR
 ## Funktionen
 
 - Ordner per Knopf (mehrere auf einmal), Drag & Drop oder Kommandozeile; Unterordner werden durchsucht
-- Quellen: FLAC, WAV, AIFF; Ziel **AIFF** (16 Bit, 44,1 kHz) oder **MP3** (320 kbit/s, 44,1 kHz)
+- Quellen: FLAC, WAV, AIFF; Ziel **AIFF** (16 Bit, 44,1 kHz), **MP3** (320 kbit/s, 44,1 kHz) oder **FLAC** (16 Bit, 44,1 kHz)
 - Kompakte Tabelle: Häkchen, Nr, Datei, kurzer Ordnerpfad, Format, Status mit Icon; alle an/aus im Kopf
 - Mehrere Dateien gleichzeitig (ein Thread pro CPU-Kern), Abbrechen jederzeit
 - Ergebnis neben der Quelle; Originale und vorhandene Dateien bleiben unverändert
-- Tags werden übernommen; das erste Bild eines Ordners wird als Cover eingebettet (AIFF und MP3)
+- Tags werden übernommen; das erste Bild eines Ordners wird als Cover eingebettet (AIFF, MP3 und FLAC)
 - Fenster „Cover“: Ordner ohne Cover und alle gefundenen Bilder
-- CSV-Protokoll nach dem Lauf, helles und dunkles Thema, Lucide-Icons
+- Sprache Deutsch oder Englisch (Auswahl oben rechts, wird gemerkt), CSV-Protokoll nach dem Lauf, helles und dunkles Thema, Lucide-Icons
 
 ## Voraussetzungen
 
@@ -51,7 +51,9 @@ audio-konverter/
 │   ├── konverter.rs  Eigener Konverter: lesen, umrechnen, 16 Bit
 │   ├── aiff.rs       AIFF schreiben
 │   ├── mp3.rs        MP3 schreiben (LAME)
-│   ├── tags.rs       Tags und Cover als ID3
+│   ├── flac.rs       FLAC schreiben (flacenc)
+│   ├── tags.rs       Tags und Cover (ID3, Vorbis)
+│   ├── texte.rs      Texte auf Deutsch und Englisch
 │   └── bericht.rs    CSV-Protokoll
 └── wiki/             Funktionen, Entscheidungen, Review, Diagramme
 ```
@@ -59,6 +61,5 @@ audio-konverter/
 ## Geplant
 
 - Standalone-Datei, später macOS und Linux
-- DJ-Player-Auswahl mit unterstützten Formaten (Pioneer, Denon)
 
 Details im [Wiki](wiki/index.md). Immer mit Kopien der Dateien testen.

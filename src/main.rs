@@ -5,17 +5,20 @@ mod aiff; // AIFF-Datei schreiben
 mod app; // Zustand und Ablaufsteuerung
 mod auftraege; // Umwandlungen parallel im Hintergrund
 mod bericht; // CSV-Protokoll
+mod flac; // FLAC-Datei schreiben
 mod gui; // Oberfläche
 mod icons; // Lucide-Icons
 mod konverter; // eigener Konverter: lesen, umrechnen, runden
 mod mp3; // MP3-Datei schreiben (LAME)
 mod scan; // Ordner durchsuchen
-mod tags; // Tags und Cover als ID3
+mod tags; // Tags und Cover (ID3, Vorbis)
+mod texte; // Texte in Deutsch und Englisch
 
 use eframe::egui;
 use std::path::PathBuf;
 
 fn main() -> eframe::Result<()> {
+    texte::laden();
     // Ordner aus der Kommandozeile übernehmen (z. B. Verknüpfung oder „Öffnen mit“)
     let ordner: Vec<PathBuf> = std::env::args_os()
         .skip(1)

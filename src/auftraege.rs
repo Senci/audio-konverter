@@ -2,6 +2,7 @@
 // Die Oberfläche erfährt den Fortschritt über Nachrichten (Msg).
 
 use crate::konverter::{self, Ziel, ABGEBROCHEN};
+use crate::texte::t;
 use eframe::egui;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::PathBuf;
@@ -65,7 +66,7 @@ pub fn starte(
                                 abbruch,
                             )
                         }))
-                        .unwrap_or_else(|_| Err("Interner Fehler im Konverter".into()));
+                        .unwrap_or_else(|_| Err(t().interner_fehler.into()));
                         melde(match ergebnis {
                             Ok(()) => Msg::Fertig(a.index),
                             Err(e) if e == ABGEBROCHEN => Msg::Abgebrochen(a.index),

@@ -1,22 +1,24 @@
 // Eigener Konverter (ersetzt ffmpeg):
 // Datei lesen (symphonia) -> auf 44,1 kHz umrechnen (rubato) -> auf 16 Bit runden
-// -> als AIFF oder MP3 schreiben. Läuft blockweise, braucht also auch bei langen
+// -> als AIFF, MP3 oder FLAC schreiben. Läuft blockweise, braucht also auch bei langen
 // DJ-Mixen kaum Speicher.
 
 use crate::aiff::AiffSchreiber;
+use crate::flac::FlacSchreiber;
 use crate::mp3::Mp3Schreiber;
 use crate::tags;
+use crate::texte::t;
 use rubato::{FftFixedIn, Resampler};
 use std::fs::{File, OpenOptions};
 use std::io::ErrorKind;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use symphonia::core::audio::SampleBuffer;
-use symphonia::core::codecs::DecoderOptions;
+use symphonia::core::audio::{AudioBufferRef, SampleBuffer};
+use symphonia::core::codecs::{Decoder, DecoderOptions};
 use symphonia::core::errors::Error as SymFehler;
-use symphonia::core::formats::FormatOptions;
+use symphonia::core::formats::{FormatOptions, FormatReader};
 use symphonia::core::io::{MediaSourceStream, MediaSourceStreamOptions};
-use symphonia::core::meta::MetadataOptions;
+use symphonia::core::meta::{MetadataOptions, Tag as QuellTag};
 use symphonia::core::probe::Hint;
 
 const ZIELRATE: usize = 44_100;
@@ -34,41 +36,51 @@ pub enum Ziel {
     #[default]
     Aiff,
     Mp3,
+    Flac,
 }
 
 impl Ziel {
+    pub const ALLE: [Ziel; 3] = [Ziel::Aiff, Ziel::Mp3, Ziel::Flac];
+
+    // Beschreibung für die Auswahl (in der gewählten Sprache)
     pub fn name(self) -> &'static str {
         match self {
-            Ziel::Aiff => "AIFF · 16 Bit · 44,1 kHz",
-            Ziel::Mp3 => "MP3 · 320 kbit/s · 44,1 kHz",
+            Ziel::Aiff => t().ziel_aiff,
+            Ziel::Mp3 => t().ziel_mp3,
+            Ziel::Flac => t().ziel_flac,
         }
     }
     pub fn kurz(self) -> &'static str {
         match self {
             Ziel::Aiff => "AIFF",
             Ziel::Mp3 => "MP3",
+            Ziel::Flac => "FLAC",
         }
     }
     pub fn endung(self) -> &'static str {
         match self {
             Ziel::Aiff => "aiff",
             Ziel::Mp3 => "mp3",
+            Ziel::Flac => "flac",
         }
     }
 }
 
-// MP3 ist immer gesperrt, AIFF nur beim Ziel AIFF
+// MP3 ist immer gesperrt, AIFF nur beim Ziel AIFF, FLAC nur beim Ziel FLAC
 pub fn ist_gesperrt(endung: &str, ziel: Ziel) -> bool {
-    endung == "mp3" || (ziel == Ziel::Aiff && (endung == "aiff" || endung == "aif"))
+    endung == "mp3"
+        || (ziel == Ziel::Aiff && (endung == "aiff" || endung == "aif"))
+        || (ziel == Ziel::Flac && endung == "flac")
 }
 
 // ---------------------------------------------------------------------------
-// Ausgabe: AIFF- oder MP3-Datei
+// Ausgabe: AIFF-, MP3- oder FLAC-Datei
 // ---------------------------------------------------------------------------
 
 enum Senke {
     Aiff(AiffSchreiber),
     Mp3(Mp3Schreiber),
+    Flac(Box<FlacSchreiber>),
 }
 
 impl Senke {
@@ -76,12 +88,14 @@ impl Senke {
         match self {
             Senke::Aiff(a) => a.schreibe(pcm).map_err(|e| e.to_string()),
             Senke::Mp3(m) => m.schreibe(pcm),
+            Senke::Flac(f) => f.schreibe(pcm),
         }
     }
     fn fertig(self) -> Result<(), String> {
         match self {
             Senke::Aiff(a) => a.fertig(),
             Senke::Mp3(m) => m.fertig(),
+            Senke::Flac(f) => f.fertig(),
         }
     }
 }
@@ -89,7 +103,7 @@ impl Senke {
 // Letzte Stufe: Float -> 16 Bit (mit Dither) -> Datei
 struct Ausgang {
     senke: Senke,
-    dither: bool,     // nur bei AIFF und nur wenn wirklich Bits wegfallen
+    dither: bool,     // nur bei AIFF und FLAC und nur wenn wirklich Bits wegfallen
     rng: u32,         // Zufallszahlen für den Dither
     skip: usize,      // Verzögerung des Resamplers am Anfang, wird verworfen
     max: Option<u64>, // am Ende: nicht mehr als die erwartete Länge schreiben
@@ -237,14 +251,14 @@ pub fn wandle(
     abbruch: &AtomicBool,
 ) -> Result<(), String> {
     // create_new: eine vorhandene Datei wird nie überschrieben, auch nicht wenn zwei
-    // Aufträge gleichzeitig dasselbe Ziel haben (z. B. „Track.wav“ und „Track.flac“)
+    // Aufträge gleichzeitig dasselbe Ziel haben (z. B. „Track.wav“ und „Track.aif“)
     let datei = OpenOptions::new()
         .write(true)
         .create_new(true)
         .open(ziel_pfad)
         .map_err(|e| match e.kind() {
-            ErrorKind::AlreadyExists => "Zieldatei existiert bereits".to_string(),
-            _ => format!("Zieldatei nicht anlegbar: {e}"),
+            ErrorKind::AlreadyExists => t().zieldatei_existiert.to_string(),
+            _ => format!("{}: {e}", t().zieldatei_nicht_anlegbar),
         })?;
     let ergebnis = lauf(quelle, datei, ziel, cover, abbruch);
     if ergebnis.is_err() {
@@ -254,15 +268,20 @@ pub fn wandle(
     ergebnis
 }
 
-fn lauf(
-    quelle: &Path,
-    ziel_datei: File,
-    ziel: Ziel,
-    cover: Option<&Path>,
-    abbruch: &AtomicBool,
-) -> Result<(), String> {
-    // 1. Quelle öffnen und das Format erkennen
-    let datei = File::open(quelle).map_err(|e| format!("Quelle nicht lesbar: {e}"))?;
+// Geöffnete Quelle: Leser, Decoder und die Eckdaten der Audiospur
+struct Quelle {
+    leser: Box<dyn FormatReader>,
+    decoder: Box<dyn Decoder>,
+    spur: u32,
+    rate: usize,
+    kanaele: usize,
+    bits: Option<u32>,
+    tags: Vec<QuellTag>,
+}
+
+// Quelle öffnen, Format erkennen, Tags einsammeln, Decoder bereitstellen
+fn oeffne(quelle: &Path) -> Result<Quelle, String> {
+    let datei = File::open(quelle).map_err(|e| format!("{}: {e}", t().quelle_nicht_lesbar))?;
     let mss = MediaSourceStream::new(Box::new(datei), MediaSourceStreamOptions::default());
     let mut hint = Hint::new();
     if let Some(e) = quelle.extension().and_then(|e| e.to_str()) {
@@ -275,47 +294,116 @@ fn lauf(
             &FormatOptions::default(),
             &MetadataOptions::default(),
         )
-        .map_err(|e| format!("Format nicht erkannt: {e}"))?;
+        .map_err(|e| format!("{}: {e}", t().format_nicht_erkannt))?;
 
     // Tags einsammeln (ID3 vor dem Container und Tags im Container)
-    let mut tag_liste = Vec::new();
+    let mut tags = Vec::new();
     if let Some(m) = probed.metadata.get() {
         if let Some(r) = m.current() {
-            tag_liste.extend(r.tags().iter().cloned());
+            tags.extend(r.tags().iter().cloned());
         }
     }
     let mut leser = probed.format;
     if let Some(r) = leser.metadata().current() {
-        tag_liste.extend(r.tags().iter().cloned());
+        tags.extend(r.tags().iter().cloned());
     }
 
-    // 2. Audiospur und Decoder
     let (spur, params) = {
-        let t = leser.default_track().ok_or("Keine Audiospur gefunden")?;
-        (t.id, t.codec_params.clone())
+        let s = leser.default_track().ok_or(t().keine_audiospur)?;
+        (s.id, s.codec_params.clone())
     };
-    let rate = params.sample_rate.ok_or("Samplerate unbekannt")? as usize;
-    let kanaele = params.channels.ok_or("Kanalzahl unbekannt")?.count();
+    let rate = params.sample_rate.ok_or(t().samplerate_unbekannt)? as usize;
+    let kanaele = params.channels.ok_or(t().kanalzahl_unbekannt)?.count();
     if kanaele == 0 || kanaele > 2 {
-        return Err(format!(
-            "{kanaele} Kanäle werden nicht unterstützt (nur Mono und Stereo)"
-        ));
+        return Err(format!("{kanaele} {}", t().kanaele_nicht_unterstuetzt));
     }
-    let mut decoder = symphonia::default::get_codecs()
+    let decoder = symphonia::default::get_codecs()
         .make(&params, &DecoderOptions::default())
-        .map_err(|e| format!("Codec nicht unterstützt: {e}"))?;
+        .map_err(|e| format!("{}: {e}", t().codec_nicht_unterstuetzt))?;
+    Ok(Quelle {
+        leser,
+        decoder,
+        spur,
+        rate,
+        kanaele,
+        bits: params.bits_per_sample,
+        tags,
+    })
+}
 
-    // Dither nur bei AIFF und nur, wenn Bits wegfallen oder umgerechnet wird.
+// Pakete lesen und dekodieren, jeden dekodierten Puffer an `verarbeite` geben
+fn dekodiere(
+    q: &mut Quelle,
+    abbruch: &AtomicBool,
+    mut verarbeite: impl FnMut(AudioBufferRef) -> Result<(), String>,
+) -> Result<(), String> {
+    loop {
+        if abbruch.load(Ordering::Relaxed) {
+            return Err(ABGEBROCHEN.into());
+        }
+        let paket = match q.leser.next_packet() {
+            Ok(p) => p,
+            Err(SymFehler::IoError(e)) if e.kind() == ErrorKind::UnexpectedEof => break,
+            Err(SymFehler::ResetRequired) => break,
+            Err(e) => return Err(format!("{}: {e}", t().lesefehler)),
+        };
+        if paket.track_id() != q.spur {
+            continue;
+        }
+        match q.decoder.decode(&paket) {
+            Ok(puffer) => {
+                if puffer.spec().channels.count() != q.kanaele {
+                    return Err(t().kanalzahl_aendert_sich.into());
+                }
+                verarbeite(puffer)?;
+            }
+            Err(SymFehler::DecodeError(_)) => {} // defektes Paket überspringen
+            Err(e) => return Err(format!("{}: {e}", t().dekodierfehler)),
+        }
+    }
+    Ok(())
+}
+
+fn lauf(
+    quelle: &Path,
+    ziel_datei: File,
+    ziel: Ziel,
+    cover: Option<&Path>,
+    abbruch: &AtomicBool,
+) -> Result<(), String> {
+    let q = oeffne(quelle)?;
+    nach_pcm(q, ziel_datei, ziel, cover, abbruch)
+}
+
+// Alle Ziele: auf 44,1 kHz und 16 Bit bringen und schreiben
+fn nach_pcm(
+    mut q: Quelle,
+    ziel_datei: File,
+    ziel: Ziel,
+    cover: Option<&Path>,
+    abbruch: &AtomicBool,
+) -> Result<(), String> {
+    let (rate, kanaele) = (q.rate, q.kanaele);
+
+    // Dither nur bei AIFF und FLAC und nur, wenn Bits wegfallen oder umgerechnet wird.
     // 16-Bit-Quellen mit 44,1 kHz werden dadurch bitgenau übernommen.
-    let dither = ziel == Ziel::Aiff && !(rate == ZIELRATE && params.bits_per_sample == Some(16));
+    let dither = ziel != Ziel::Mp3 && !(rate == ZIELRATE && q.bits == Some(16));
 
-    // 3. Ausgabe vorbereiten
-    let id3 = tags::erzeuge(&tag_liste, cover);
     let senke = match ziel {
+        Ziel::Mp3 => Senke::Mp3(Mp3Schreiber::neu(
+            ziel_datei,
+            kanaele as u8,
+            &tags::erzeuge(&q.tags, cover),
+        )?),
         Ziel::Aiff => Senke::Aiff(
-            AiffSchreiber::neu(ziel_datei, kanaele as u16, id3).map_err(|e| e.to_string())?,
+            AiffSchreiber::neu(ziel_datei, kanaele as u16, tags::erzeuge(&q.tags, cover))
+                .map_err(|e| e.to_string())?,
         ),
-        Ziel::Mp3 => Senke::Mp3(Mp3Schreiber::neu(ziel_datei, kanaele as u8, &id3)?),
+        Ziel::Flac => Senke::Flac(Box::new(FlacSchreiber::neu(
+            ziel_datei,
+            kanaele,
+            tags::flac_bloecke(&q.tags, cover),
+        )?)),
     };
     let ausgang = Ausgang {
         senke,
@@ -327,35 +415,13 @@ fn lauf(
     };
     let mut strom = Strom::neu(rate, kanaele, ausgang)?;
 
-    // 4. Paket für Paket lesen, dekodieren und weiterreichen
     let mut frames_ein: u64 = 0;
-    loop {
-        if abbruch.load(Ordering::Relaxed) {
-            return Err(ABGEBROCHEN.into());
-        }
-        let paket = match leser.next_packet() {
-            Ok(p) => p,
-            Err(SymFehler::IoError(e)) if e.kind() == ErrorKind::UnexpectedEof => break,
-            Err(SymFehler::ResetRequired) => break,
-            Err(e) => return Err(format!("Lesefehler: {e}")),
-        };
-        if paket.track_id() != spur {
-            continue;
-        }
-        match decoder.decode(&paket) {
-            Ok(puffer) => {
-                if puffer.spec().channels.count() != kanaele {
-                    return Err("Kanalzahl ändert sich mitten in der Datei".into());
-                }
-                let mut sb = SampleBuffer::<f32>::new(puffer.capacity() as u64, *puffer.spec());
-                sb.copy_interleaved_ref(puffer);
-                frames_ein += (sb.samples().len() / kanaele) as u64;
-                strom.zufuehren(sb.samples())?;
-            }
-            Err(SymFehler::DecodeError(_)) => {} // defektes Paket überspringen
-            Err(e) => return Err(format!("Dekodierfehler: {e}")),
-        }
-    }
+    dekodiere(&mut q, abbruch, |puffer| {
+        let mut sb = SampleBuffer::<f32>::new(puffer.capacity() as u64, *puffer.spec());
+        sb.copy_interleaved_ref(puffer);
+        frames_ein += (sb.samples().len() / kanaele) as u64;
+        strom.zufuehren(sb.samples())
+    })?;
     strom.abschliessen(frames_ein, rate)
 }
 
@@ -545,7 +611,7 @@ pub(crate) mod tests {
         let ziel = o.join("a.aiff");
         std::fs::write(&ziel, b"nicht anfassen").unwrap();
         let fehler = wandle(&quelle, &ziel, Ziel::Aiff, None, &nie_abbrechen()).unwrap_err();
-        assert_eq!(fehler, "Zieldatei existiert bereits");
+        assert_eq!(fehler, t().zieldatei_existiert);
         assert_eq!(std::fs::read(&ziel).unwrap(), b"nicht anfassen");
     }
 
@@ -577,5 +643,109 @@ pub(crate) mod tests {
         assert!(ist_gesperrt("aif", Ziel::Aiff));
         assert!(!ist_gesperrt("aiff", Ziel::Mp3));
         assert!(!ist_gesperrt("flac", Ziel::Aiff));
+        assert!(ist_gesperrt("flac", Ziel::Flac));
+        assert!(ist_gesperrt("mp3", Ziel::Flac));
+        assert!(!ist_gesperrt("wav", Ziel::Flac));
+        assert!(!ist_gesperrt("aiff", Ziel::Flac));
+        assert!(!ist_gesperrt("flac", Ziel::Mp3));
+    }
+
+    // Eine Datei mit dem eigenen Dekodierpfad lesen: (Samplerate, Bits, Samples in Originalbreite)
+    fn dekodiert(pfad: &Path) -> (usize, u32, Vec<i32>) {
+        let mut q = oeffne(pfad).unwrap();
+        let (rate, bits) = (q.rate, q.bits.unwrap());
+        let mut samples = Vec::new();
+        dekodiere(&mut q, &nie_abbrechen(), |puffer| {
+            let mut sb = SampleBuffer::<i32>::new(puffer.capacity() as u64, *puffer.spec());
+            sb.copy_interleaved_ref(puffer);
+            samples.extend(sb.samples().iter().map(|s| s >> (32 - bits)));
+            Ok(())
+        })
+        .unwrap();
+        (rate, bits, samples)
+    }
+
+    // 16 Bit / 44,1 kHz bleibt sample-genau; alles andere wird 44,1 kHz / 16 Bit
+    #[test]
+    fn wav_wird_flac_mit_16_bit_44khz() {
+        let o = ordner("flac-16-44");
+        let quelle = o.join("a.wav");
+        let original = wav(&quelle, 44_100, 16, 0.5);
+        wandle(
+            &quelle,
+            &o.join("a.flac"),
+            Ziel::Flac,
+            None,
+            &nie_abbrechen(),
+        )
+        .unwrap();
+        let (r, b, samples) = dekodiert(&o.join("a.flac"));
+        assert_eq!((r, b), (44_100, 16));
+        assert_eq!(samples, original);
+
+        for (rate, bits) in [(96_000, 24), (48_000, 24)] {
+            let q = o.join(format!("b{rate}.wav"));
+            wav(&q, rate, bits, 1.0);
+            let z = o.join(format!("b{rate}.flac"));
+            wandle(&q, &z, Ziel::Flac, None, &nie_abbrechen()).unwrap();
+            let (r, b, samples) = dekodiert(&z);
+            assert_eq!((r, b), (44_100, 16), "{rate} Hz, {bits} Bit");
+            assert_eq!(samples.len() / 2, 44_100);
+        }
+    }
+
+    // Kopf: STREAMINFO, danach Bild; der letzte Block trägt die Last-Markierung
+    #[test]
+    fn flac_mit_cover_hat_bildblock() {
+        let o = ordner("flac-cover");
+        let quelle = o.join("a.wav");
+        let original = wav(&quelle, 44_100, 16, 0.2);
+        let bild = o.join("cover.png");
+        std::fs::write(&bild, b"\x89PNG kein echtes Bild").unwrap();
+        wandle(
+            &quelle,
+            &o.join("a.flac"),
+            Ziel::Flac,
+            Some(&bild),
+            &nie_abbrechen(),
+        )
+        .unwrap();
+        let d = std::fs::read(o.join("a.flac")).unwrap();
+        assert_eq!(&d[0..4], b"fLaC");
+        let mut typen = Vec::new();
+        let mut p = 4;
+        loop {
+            let (letzter, typ) = (d[p] & 0x80 != 0, d[p] & 0x7F);
+            let laenge = u32::from_be_bytes([0, d[p + 1], d[p + 2], d[p + 3]]) as usize;
+            typen.push(typ);
+            p += 4 + laenge;
+            if letzter {
+                break;
+            }
+        }
+        assert_eq!(typen, vec![0, 6]);
+        assert!(d.windows(9).any(|w| w == b"image/png"));
+        // Und die Datei bleibt abspielbar
+        assert_eq!(dekodiert(&o.join("a.flac")).2, original);
+    }
+
+    // Eine leere Quelle ergibt eine gültige Datei ohne Frames (Kopf mit 0 Samples)
+    #[test]
+    fn leere_quelle_ergibt_gueltiges_flac() {
+        let o = ordner("flac-leer");
+        wav(&o.join("a.wav"), 44_100, 16, 0.0);
+        wandle(
+            &o.join("a.wav"),
+            &o.join("a.flac"),
+            Ziel::Flac,
+            None,
+            &nie_abbrechen(),
+        )
+        .unwrap();
+        let d = std::fs::read(o.join("a.flac")).unwrap();
+        assert_eq!(&d[0..4], b"fLaC");
+        let gesamt = u64::from_be_bytes(d[18..26].try_into().unwrap()) & ((1 << 36) - 1);
+        assert_eq!(gesamt, 0);
+        assert_eq!(d.len(), 4 + 4 + 34); // nur Kopf
     }
 }

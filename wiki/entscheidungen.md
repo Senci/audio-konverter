@@ -10,7 +10,7 @@
 | MP3-Quellen immer gesperrt | MP3 nicht erneut umwandeln |
 | Zieldateien nie überschreiben | Datenverlust vermeiden |
 | MP3 mit ID3v2.3 | beste Player-Kompatibilität |
-| Dither nur bei AIFF und nur wenn Bits wegfallen | 16-Bit-Quellen mit 44,1 kHz bleiben bitgenau |
+| Dither nur bei AIFF und FLAC und nur wenn Bits wegfallen | 16-Bit-Quellen mit 44,1 kHz bleiben bitgenau |
 | LAME eingebaut (mp3lame-encoder) | MP3 ohne ffmpeg |
 | symphonia zum Lesen, rubato zum Umrechnen | reine Rust-Bibliotheken, kein externes Programm |
 | Code in Module aufgeteilt | eine `main.rs` wäre mit den offenen Punkten zu groß geworden |
@@ -29,7 +29,13 @@
 | Format als eine Spalte („FLAC → AIFF“), Ordner kurz ab Quellordner | kompakte Tabelle, voller Pfad als Tooltip und im Protokoll |
 | Nur sichtbare Zeilen zeichnen | flüssig auch bei tausenden Dateien |
 | Tests im Projekt (`cargo test --release`) | Bitgenauigkeit, Länge, MP3, Cover, Abbruch, vorhandene Dateien |
-| Zielformate AIFF (16 Bit, 44,1 kHz) und MP3 (320 kbit/s), keine Playerauswahl | alle geprüften Pioneer- und Denon-Player spielen beide Formate (Liste in `dj-player.md`); eine Auswahl würde am Ergebnis nichts ändern (KISS, YAGNI) |
+| Zielformate AIFF (16 Bit, 44,1 kHz), MP3 (320 kbit/s) und FLAC, keine Playerauswahl | alle geprüften Pioneer- und Denon-Player spielen AIFF und MP3 (Liste in `dj-player.md`); eine Auswahl würde am Ergebnis nichts ändern (KISS, YAGNI). FLAC ist optional, weil nicht jeder Player es spielt |
+| FLAC wie AIFF fest 16 Bit, 44,1 kHz | gleiche Umrechnung für alle Ziele (KISS); FLAC ist dann verlustfrei gegenüber dem 16-Bit-Ergebnis, 16-Bit-Quellen mit 44,1 kHz bleiben sample-genau |
+| FLAC mit `flacenc` (reines Rust), Kopf selbst geschrieben | kein C-Compiler nötig; blockweises Schreiben spart Speicher, der Kopf wird am Ende mit Länge und MD5 neu geschrieben. Blockgröße min = max, damit Leser den Strom nicht für variabel halten |
+| Tags und Cover in FLAC als Vorbis-Kommentar und PICTURE-Block | Standard für FLAC; ID3 in FLAC wird von vielen Playern ignoriert |
+| Alle Texte in `texte.rs`, Sprache global (`AtomicU8`) | Fehlertexte entstehen in Hintergrund-Threads und brauchen die Sprache ohne Weiterreichen |
+| Sprache in `sprache.txt` im Einstellungsordner gemerkt, sonst Systemsprache | ohne Zusatzbibliothek; ohne Schreibrecht gilt die Systemsprache |
+| Das Protokoll (CSV) folgt der Sprache, auch der Kopf | eine Sprache pro Programmlauf, einfacher zu erklären |
 
 ## Module
 
@@ -40,11 +46,13 @@ flowchart LR
     gui --> app
     gui --> icons["icons.rs"]
     gui --> bericht["bericht.rs"]
+    gui --> texte["texte.rs"]
     app --> scan["scan.rs"]
     app --> auftraege["auftraege.rs"]
     auftraege --> konverter["konverter.rs"]
     konverter --> aiff["aiff.rs"]
     konverter --> mp3["mp3.rs"]
+    konverter --> flac["flac.rs"]
     konverter --> tags["tags.rs"]
 ```
 
@@ -56,8 +64,10 @@ flowchart LR
 | `icons.rs` | Lucide-Icons |
 | `scan.rs` | Audio- und Bilddateien in einem Durchlauf finden |
 | `auftraege.rs` | Aufträge parallel im Hintergrund, Nachrichten an die Oberfläche |
-| `konverter.rs` | `Ziel`, Sperrregel, lesen, auf 44,1 kHz umrechnen, auf 16 Bit runden |
+| `konverter.rs` | `Ziel`, Sperrregel, lesen, auf 44,1 kHz umrechnen, auf 16 Bit runden, als AIFF, MP3 oder FLAC schreiben |
 | `aiff.rs` | AIFF schreiben |
 | `mp3.rs` | MP3 schreiben (LAME, 320 kbit/s) |
-| `tags.rs` | Tags und Cover als ID3 |
+| `flac.rs` | FLAC schreiben (flacenc), Kopf mit Länge und MD5 |
+| `texte.rs` | alle Texte in Deutsch und Englisch, Sprachwahl merken |
+| `tags.rs` | Tags und Cover als ID3 (AIFF, MP3) und als Vorbis-Kommentar mit Bildblock (FLAC) |
 | `bericht.rs` | CSV-Protokoll |

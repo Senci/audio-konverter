@@ -3,6 +3,7 @@
 use crate::auftraege::{self, Auftrag, Msg};
 use crate::konverter::{ist_gesperrt, Ziel};
 use crate::scan;
+use crate::texte::t;
 use eframe::egui;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -25,14 +26,15 @@ pub enum Status {
 impl Status {
     // Anzeigetext, auch für das Protokoll
     pub fn text(&self) -> &'static str {
+        let t = t();
         match self {
-            Status::Bereit => "bereit",
-            Status::Gesperrt => "gesperrt",
-            Status::Existiert => "existiert bereits",
-            Status::Wartet => "wartet",
-            Status::Laeuft => "läuft",
-            Status::Fertig => "fertig",
-            Status::Fehler(_) => "Fehler",
+            Status::Bereit => t.status_bereit,
+            Status::Gesperrt => t.status_gesperrt,
+            Status::Existiert => t.status_existiert,
+            Status::Wartet => t.status_wartet,
+            Status::Laeuft => t.status_laeuft,
+            Status::Fertig => t.status_fertig,
+            Status::Fehler(_) => t.status_fehler,
         }
     }
 }
@@ -235,7 +237,7 @@ impl App {
         !self.laeuft && self.anzahl_gewaehlt() > 0
     }
 
-    // Erstes Bild (alphabetisch) im Ordner, wird bei AIFF als Cover eingebettet
+    // Erstes Bild (alphabetisch) im Ordner, wird als Cover eingebettet
     fn cover_fuer(&self, ordner: &Path) -> Option<PathBuf> {
         self.bilder
             .iter()
@@ -322,10 +324,17 @@ impl App {
         }
         let ok = self.erledigt - self.fehler;
         let offen = self.gesamt - self.erledigt; // nicht begonnen oder abgebrochen
+        let t = t();
         self.meldung = Some(match (self.fehler, offen) {
-            (0, 0) => format!("Fertig: {ok} umgewandelt"),
-            (f, 0) => format!("Fertig: {ok} umgewandelt, {f} Fehler"),
-            (f, o) => format!("Abgebrochen: {ok} umgewandelt, {f} Fehler, {o} nicht begonnen"),
+            (0, 0) => format!("{}: {ok} {}", t.m_fertig, t.m_umgewandelt),
+            (f, 0) => format!(
+                "{}: {ok} {}, {f} {}",
+                t.m_fertig, t.m_umgewandelt, t.m_fehler
+            ),
+            (f, o) => format!(
+                "{}: {ok} {}, {f} {}, {o} {}",
+                t.m_abgebrochen, t.m_umgewandelt, t.m_fehler, t.m_nicht_begonnen
+            ),
         });
     }
 }
@@ -400,7 +409,7 @@ mod tests {
     }
 
     // Ganzen Ordner ohne Oberfläche umwandeln, z. B. zum Messen:
-    // AK_ORDNER=D:\Musik AK_ZIEL=mp3 cargo test --release -- --ignored --nocapture ordner_umwandeln
+    // AK_ORDNER=D:\Musik AK_ZIEL=mp3 (oder flac) cargo test --release -- --ignored --nocapture ordner_umwandeln
     #[test]
     #[ignore]
     fn ordner_umwandeln() {
@@ -408,8 +417,10 @@ mod tests {
         app.ordner_hinzufuegen(PathBuf::from(
             std::env::var("AK_ORDNER").expect("AK_ORDNER setzen"),
         ));
-        if std::env::var("AK_ZIEL").as_deref() == Ok("mp3") {
-            app.ziel_setzen(Ziel::Mp3);
+        match std::env::var("AK_ZIEL").as_deref() {
+            Ok("mp3") => app.ziel_setzen(Ziel::Mp3),
+            Ok("flac") => app.ziel_setzen(Ziel::Flac),
+            _ => {}
         }
         let start = std::time::Instant::now();
         durchlaufen(&mut app);

@@ -44,7 +44,7 @@ impl AiffSchreiber {
 
     // ID3-Chunk anhängen und die Größen im Kopf nachtragen
     pub fn fertig(mut self) -> Result<(), String> {
-        let groesse = |n: u64| u32::try_from(n).map_err(|_| "Datei größer als 4 GB (AIFF-Grenze)");
+        let groesse = |n: u64| u32::try_from(n).map_err(|_| crate::texte::t().aiff_zu_gross);
         if !self.id3.is_empty() {
             let laenge = groesse(self.id3.len() as u64)?;
             self.datei.write_all(b"ID3 ").map_err(|e| e.to_string())?;

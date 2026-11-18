@@ -3,6 +3,7 @@
 
 use crate::app::{App, Datei, Status};
 use crate::konverter::Ziel;
+use crate::texte::{self, t, Sprache};
 use crate::{bericht, icons};
 use eframe::egui::{
     self, vec2, Align, Align2, Checkbox, Color32, FontId, ImageSource, Label, Layout, Margin,
@@ -180,6 +181,7 @@ fn dateizeile(ui: &mut Ui, d: &mut Datei, nr: usize, spalten: &[f32; 6], ziel: Z
 impl App {
     // Oben: Ordner hinzufügen, Zielformat, Cover, Protokoll
     fn werkzeugleiste(&mut self, ctx: &egui::Context) {
+        let t = t();
         let rahmen =
             egui::Frame::side_top_panel(&ctx.style()).inner_margin(Margin::symmetric(10.0, 6.0));
         egui::TopBottomPanel::top("werkzeuge")
@@ -188,7 +190,7 @@ impl App {
                 ui.horizontal(|ui| {
                     ui.add_enabled_ui(!self.laeuft, |ui| {
                         if ui
-                            .add(knopf(ui, icons::ORDNER_PLUS, "Ordner hinzufügen"))
+                            .add(knopf(ui, icons::ORDNER_PLUS, t.ordner_hinzufuegen))
                             .clicked()
                         {
                             for p in rfd::FileDialog::new().pick_folders().unwrap_or_default() {
@@ -196,13 +198,13 @@ impl App {
                             }
                         }
                         ui.separator();
-                        ui.label(RichText::new("Ziel").weak());
+                        ui.label(RichText::new(t.ziel).weak());
                         let mut ziel = self.ziel;
                         egui::ComboBox::from_id_salt("ziel")
                             .selected_text(ziel.name())
                             .width(190.0)
                             .show_ui(ui, |ui| {
-                                for z in [Ziel::Aiff, Ziel::Mp3] {
+                                for z in Ziel::ALLE {
                                     ui.selectable_value(&mut ziel, z, z.name());
                                 }
                             });
@@ -210,29 +212,47 @@ impl App {
                     });
 
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        // Sprache ganz rechts (nicht von einem Lauf gesperrt)
+                        let mut sprache = texte::sprache();
+                        egui::ComboBox::from_id_salt("sprache")
+                            .selected_text(sprache.name())
+                            .width(76.0)
+                            .show_ui(ui, |ui| {
+                                for s in Sprache::ALLE {
+                                    ui.selectable_value(&mut sprache, s, s.name());
+                                }
+                            })
+                            .response
+                            .on_hover_text(t.sprache_tip);
+                        if sprache != texte::sprache() {
+                            texte::wechseln(sprache);
+                        }
+                        let schwach = ui.visuals().weak_text_color();
+                        ui.add(icons::bild(icons::SPRACHE, ICON, schwach));
+                        ui.separator();
                         if ui
                             .add_enabled(
                                 self.protokoll_bereit,
-                                knopf(ui, icons::PROTOKOLL, "Protokoll"),
+                                knopf(ui, icons::PROTOKOLL, t.protokoll),
                             )
-                            .on_hover_text("Protokoll als CSV speichern")
-                            .on_disabled_hover_text("Verfügbar nach einer Umwandlung")
+                            .on_hover_text(t.protokoll_tip)
+                            .on_disabled_hover_text(t.protokoll_tip_aus)
                             .clicked()
                         {
                             self.protokoll_speichern();
                         }
                         let fehlen = self.ohne_cover.len();
                         let text = if fehlen == 0 {
-                            "Cover".to_string()
+                            t.cover.to_string()
                         } else {
-                            format!("Cover · {fehlen} fehlen")
+                            format!("{} · {fehlen} {}", t.cover, t.cover_fehlen)
                         };
                         if ui
                             .add_enabled(
                                 !self.ordner.is_empty(),
                                 knopf(ui, icons::OHNE_COVER, &text),
                             )
-                            .on_hover_text("Ordner ohne Cover und gefundene Bilder")
+                            .on_hover_text(t.cover_tip)
                             .clicked()
                         {
                             self.zeige_cover = !self.zeige_cover;
@@ -244,13 +264,14 @@ impl App {
 
     // Links: gewählte Quellordner
     fn quellen(&mut self, ctx: &egui::Context) {
+        let t = t();
         let rahmen = egui::Frame::side_top_panel(&ctx.style()).inner_margin(Margin::same(10.0));
         egui::SidePanel::left("quellen")
             .frame(rahmen)
             .default_width(220.0)
             .width_range(160.0..=420.0)
             .show(ctx, |ui| {
-                ueberschrift(ui, "Quellen");
+                ueberschrift(ui, t.quellen);
                 let schwach = ui.visuals().weak_text_color();
                 let mut entfernen = None;
                 egui::ScrollArea::vertical().show(ui, |ui| {
@@ -271,7 +292,7 @@ impl App {
                                 .frame(false);
                                 if ui
                                     .add_enabled(!self.laeuft, x)
-                                    .on_hover_text("Ordner entfernen")
+                                    .on_hover_text(t.ordner_entfernen)
                                     .clicked()
                                 {
                                     entfernen = Some(i);
@@ -281,7 +302,9 @@ impl App {
                                     ui.add(Label::new(name).truncate())
                                         .on_hover_text(o.display().to_string());
                                     ui.label(
-                                        RichText::new(format!("{anzahl} Dateien")).small().weak(),
+                                        RichText::new(format!("{anzahl} {}", t.dateien))
+                                            .small()
+                                            .weak(),
                                     );
                                 });
                             });
@@ -297,16 +320,17 @@ impl App {
 
     // Unten: Zusammenfassung, Fortschritt, Hauptaktion
     fn statusleiste(&mut self, ctx: &egui::Context) {
+        let t = t();
         let rahmen =
             egui::Frame::side_top_panel(&ctx.style()).inner_margin(Margin::symmetric(10.0, 6.0));
         egui::TopBottomPanel::bottom("status")
             .frame(rahmen)
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    let mut info = format!("{} Dateien", self.dateien.len());
+                    let mut info = format!("{} {}", self.dateien.len(), t.dateien);
                     let gewaehlt = self.anzahl_gewaehlt();
                     if !self.laeuft && gewaehlt > 0 {
-                        info = format!("{info} · {gewaehlt} ausgewählt");
+                        info = format!("{info} · {gewaehlt} {}", t.ausgewaehlt);
                     }
                     if let Some(m) = &self.meldung {
                         info = format!("{info} · {m}");
@@ -315,7 +339,7 @@ impl App {
 
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if self.laeuft {
-                            if ui.add(knopf(ui, icons::STOPP, "Abbrechen")).clicked() {
+                            if ui.add(knopf(ui, icons::STOPP, t.abbrechen)).clicked() {
                                 self.abbrechen();
                             }
                             let anteil = self.erledigt as f32 / self.gesamt.max(1) as f32;
@@ -331,9 +355,9 @@ impl App {
                         } else if ui
                             .add_enabled(
                                 self.kann_starten(),
-                                haupt_knopf(icons::START, "Umwandeln"),
+                                haupt_knopf(icons::START, t.umwandeln),
                             )
-                            .on_disabled_hover_text("Keine Datei ausgewählt")
+                            .on_disabled_hover_text(t.keine_auswahl)
                             .clicked()
                         {
                             self.starten(ctx);
@@ -345,6 +369,7 @@ impl App {
 
     // Mitte: Dateiliste oder Hinweis, wenn noch nichts gewählt ist
     fn liste(&mut self, ctx: &egui::Context) {
+        let t = t();
         let rahmen =
             egui::Frame::central_panel(&ctx.style()).inner_margin(Margin::symmetric(8.0, 6.0));
         egui::CentralPanel::default().frame(rahmen).show(ctx, |ui| {
@@ -367,16 +392,13 @@ impl App {
                         .indeterminate(gewaehlt > 0 && gewaehlt < waehlbar);
                     if ui
                         .add_enabled(waehlbar > 0 && !laeuft, kasten)
-                        .on_hover_text("Alle an- oder abwählen")
+                        .on_hover_text(t.alle_tip)
                         .changed()
                     {
                         self.alle_waehlen(alle);
                     }
                 });
-                for (titel, breite) in ["Nr", "Datei", "Ordner", "Format", "Status"]
-                    .into_iter()
-                    .zip(&spalten[1..])
-                {
+                for (titel, breite) in t.spalten.into_iter().zip(&spalten[1..]) {
                     zelle(ui, *breite, |ui| {
                         ui.label(RichText::new(titel).small().strong().weak());
                     });
@@ -404,44 +426,51 @@ impl App {
         if !self.zeige_cover {
             return;
         }
+        let t = t();
         let mut offen = true;
-        egui::Window::new("Cover")
+        egui::Window::new(t.cover)
+            .id(egui::Id::new("cover"))
             .open(&mut offen)
             .collapsible(false)
             .default_size([480.0, 360.0])
             .show(ctx, |ui| {
                 let v = ui.visuals();
                 let (warn, schwach) = (v.warn_fg_color, v.weak_text_color());
-                egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
-                    ueberschrift(ui, &format!("Ordner ohne Cover · {}", self.ohne_cover.len()));
-                    if self.ohne_cover.is_empty() {
-                        ui.label(RichText::new("Alle Ordner mit Audiodateien haben ein Bild.").weak());
-                    }
-                    for (pfad, anzeige) in &self.ohne_cover {
-                        ui.horizontal(|ui| {
-                            ui.add(icons::bild(icons::OHNE_COVER, ICON, warn));
-                            ui.add(Label::new(anzeige.as_str()).truncate())
-                                .on_hover_text(pfad.display().to_string());
-                        });
-                    }
-                    ui.add_space(10.0);
-                    ueberschrift(ui, &format!("Gefundene Bilder · {}", self.bilder.len()));
-                    ui.label(
-                        RichText::new(
-                            "Werden nie umgewandelt. Bei AIFF wird das erste Bild eines Ordners als Cover eingebettet.",
-                        )
-                        .small()
-                        .weak(),
-                    );
-                    for b in &self.bilder {
-                        ui.horizontal(|ui| {
-                            ui.add(icons::bild(icons::BILD, ICON, schwach));
-                            ui.label(b.name.as_str());
-                            ui.add(Label::new(RichText::new(b.ordner_anzeige.as_str()).weak()).truncate())
+                egui::ScrollArea::vertical()
+                    .auto_shrink(false)
+                    .show(ui, |ui| {
+                        ueberschrift(
+                            ui,
+                            &format!("{} · {}", t.ordner_ohne_cover, self.ohne_cover.len()),
+                        );
+                        if self.ohne_cover.is_empty() {
+                            ui.label(RichText::new(t.alle_haben_bild).weak());
+                        }
+                        for (pfad, anzeige) in &self.ohne_cover {
+                            ui.horizontal(|ui| {
+                                ui.add(icons::bild(icons::OHNE_COVER, ICON, warn));
+                                ui.add(Label::new(anzeige.as_str()).truncate())
+                                    .on_hover_text(pfad.display().to_string());
+                            });
+                        }
+                        ui.add_space(10.0);
+                        ueberschrift(
+                            ui,
+                            &format!("{} · {}", t.gefundene_bilder, self.bilder.len()),
+                        );
+                        ui.label(RichText::new(t.bilder_hinweis).small().weak());
+                        for b in &self.bilder {
+                            ui.horizontal(|ui| {
+                                ui.add(icons::bild(icons::BILD, ICON, schwach));
+                                ui.label(b.name.as_str());
+                                ui.add(
+                                    Label::new(RichText::new(b.ordner_anzeige.as_str()).weak())
+                                        .truncate(),
+                                )
                                 .on_hover_text(b.pfad.display().to_string());
-                        });
-                    }
-                });
+                            });
+                        }
+                    });
             });
         self.zeige_cover = offen;
     }
@@ -462,7 +491,7 @@ impl App {
             if p.is_dir() {
                 self.ordner_hinzufuegen(p);
             } else {
-                self.meldung = Some("Nur Ordner können abgelegt werden".into());
+                self.meldung = Some(t().nur_ordner.into());
             }
         }
         if schwebt && !self.laeuft {
@@ -475,7 +504,7 @@ impl App {
             maler.text(
                 rect.center(),
                 Align2::CENTER_CENTER,
-                "Ordner hier ablegen",
+                t().hier_ablegen,
                 FontId::proportional(18.0),
                 Color32::WHITE,
             );
@@ -485,32 +514,29 @@ impl App {
     // Protokoll als CSV speichern (Dialog „Speichern unter“)
     fn protokoll_speichern(&mut self) {
         let Some(pfad) = rfd::FileDialog::new()
-            .set_file_name("protokoll.csv")
+            .set_file_name(t().protokoll_datei)
             .add_filter("CSV", &["csv"])
             .save_file()
         else {
             return;
         };
         self.meldung = Some(match bericht::speichern(&self.dateien, self.ziel, &pfad) {
-            Ok(()) => format!("Protokoll gespeichert: {}", pfad.display()),
-            Err(e) => format!("Protokoll nicht gespeichert: {e}"),
+            Ok(()) => format!("{}: {}", t().protokoll_gespeichert, pfad.display()),
+            Err(e) => format!("{}: {e}", t().protokoll_nicht_gespeichert),
         });
     }
 }
 
 // Hinweis bei leerer Liste
 fn leer(ui: &mut Ui) {
+    let t = t();
     let schwach = ui.visuals().weak_text_color();
     ui.vertical_centered(|ui| {
         ui.add_space(ui.available_height() * 0.3);
         ui.add(icons::bild(icons::ORDNER_OFFEN, 40.0, schwach));
         ui.add_space(8.0);
-        ui.label(RichText::new("Ordner hinzufügen oder hierher ziehen").weak());
-        ui.label(
-            RichText::new("FLAC, WAV und AIFF werden zu AIFF oder MP3")
-                .small()
-                .weak(),
-        );
+        ui.label(RichText::new(t.leer_titel).weak());
+        ui.label(RichText::new(t.leer_info).small().weak());
     });
 }
 

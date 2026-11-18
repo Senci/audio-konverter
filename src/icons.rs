@@ -13,6 +13,7 @@ pub const PROTOKOLL: ImageSource<'static> = include_image!("../assets/icons/file
 pub const OHNE_COVER: ImageSource<'static> = include_image!("../assets/icons/image-off.svg");
 pub const PFEIL: ImageSource<'static> = include_image!("../assets/icons/arrow-right.svg");
 pub const BILD: ImageSource<'static> = include_image!("../assets/icons/image.svg");
+pub const SPRACHE: ImageSource<'static> = include_image!("../assets/icons/languages.svg");
 pub const BEREIT: ImageSource<'static> = include_image!("../assets/icons/circle.svg");
 pub const GESPERRT: ImageSource<'static> = include_image!("../assets/icons/lock.svg");
 pub const EXISTIERT: ImageSource<'static> = include_image!("../assets/icons/file-check.svg");

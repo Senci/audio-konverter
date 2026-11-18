@@ -2,7 +2,7 @@
 
 [Deutsch](README.de.md)
 
-Windows desktop app (Rust, egui) that converts whole folders of audio files, for example for the Pioneer XDJ-700 (plays AIFF and MP3, no FLAC). Own converter built in, no ffmpeg needed.
+Windows desktop app (Rust, egui) that converts whole folders of audio files, for example for the Pioneer XDJ-700 (plays AIFF and MP3, no FLAC). Own converter built in, no ffmpeg needed. User interface in German and English.
 
 ```mermaid
 flowchart LR
@@ -12,13 +12,13 @@ flowchart LR
 ## Features
 
 - Add folders via button (several at once), drag and drop or command line; subfolders are scanned
-- Sources: FLAC, WAV, AIFF; target **AIFF** (16 bit, 44.1 kHz) or **MP3** (320 kbit/s, 44.1 kHz)
+- Sources: FLAC, WAV, AIFF; target **AIFF** (16 bit, 44.1 kHz), **MP3** (320 kbit/s, 44.1 kHz) or **FLAC** (16 bit, 44.1 kHz)
 - Compact table: checkbox, number, file, short folder path, format, status with icon; select all in the header
 - Several files at once (one thread per CPU core), cancel at any time
 - Output next to the source; originals and existing files are never touched
-- Tags are copied; the first image of a folder is embedded as cover (AIFF and MP3)
+- Tags are copied; the first image of a folder is embedded as cover (AIFF, MP3 and FLAC)
 - "Cover" window: folders without cover and all found images
-- CSV log after a run, light and dark theme, Lucide icons
+- Language: German or English (menu top right, remembered), CSV log after a run, light and dark theme, Lucide icons
 
 ## Requirements
 
@@ -51,7 +51,9 @@ audio-konverter/
 │   ├── konverter.rs  Own converter: read, resample, 16 bit
 │   ├── aiff.rs       AIFF writer
 │   ├── mp3.rs        MP3 writer (LAME)
-│   ├── tags.rs       Tags and cover as ID3
+│   ├── flac.rs       FLAC writer (flacenc)
+│   ├── tags.rs       Tags and cover (ID3, Vorbis)
+│   ├── texte.rs      Texts in German and English
 │   └── bericht.rs    CSV log
 └── wiki/             features, decisions, review, diagrams (German)
 ```
@@ -59,6 +61,5 @@ audio-konverter/
 ## Planned
 
 - Standalone file, later macOS and Linux
-- DJ player selection with supported formats (Pioneer, Denon)
 
 Details in the [wiki](wiki/index.md). Always test with copies of your files.
