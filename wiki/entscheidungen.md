@@ -13,41 +13,50 @@
 | Dither nur bei AIFF und nur wenn Bits wegfallen | 16-Bit-Quellen mit 44,1 kHz bleiben bitgenau |
 | LAME eingebaut (mp3lame-encoder) | MP3 ohne ffmpeg |
 | symphonia zum Lesen, rubato zum Umrechnen | reine Rust-Bibliotheken, kein externes Programm |
-| Zieldatei mit `create_new` öffnen | vorhandene Datei kann nicht überschrieben werden |
 | Code in Module aufgeteilt | eine `main.rs` wäre mit den offenen Punkten zu groß geworden |
 | Nr zählt alle Zeilen | gesperrte Dateien bleiben sichtbar, Nr passt zur Gesamtzahl |
 | CSV mit Semikolon, ohne Anführungszeichen | deutsches Excel öffnet das direkt in Spalten |
 | Semikolon im Text wird zu Komma | sonst verrutschen die Spalten |
 | BOM am Dateianfang | Umlaute in Excel korrekt |
 | Protokoll-Knopf erst nach einem Lauf | ein Protokoll ohne Lauf wäre leer |
+| Mehrere Dateien gleichzeitig, ein Thread pro Kern | LAME nutzt nur einen Kern; 60 Tracks nach MP3 dauerten 6:30 min |
 | Standalone-Datei wie `cargo run --release` | Messung: 60 Tracks (WAV und FLAC) nach AIFF in 19 s im Release-Build. Im Debug-Build ist der eigene Konverter deutlich langsamer. Die Standalone-Datei muss also optimiert gebaut werden. |
+| Ziel mit `create_new` anlegen, nur selbst angelegte Dateien löschen | nie überschreiben; bei parallelen Aufträgen mit gleichem Ziel (`a.wav` und `a.flac`) wird nie eine fremde Datei gelöscht |
+| Abgebrochene Datei wird wieder „bereit“ | sie wurde gelöscht, ist also kein Fehler |
+| Cover kommt aus der Bilderliste der App | eine Quelle der Wahrheit für Fenster „Cover“ und Einbetten |
+| Lucide-Icons (Iconify), als SVG über `egui_extras` | schlicht, einheitlich, ISC-Lizenz; weiß gespeichert und eingefärbt |
+| Feste Akzentfarbe für die Hauptaktion | Weiß auf Blau ist in hellem und dunklem Thema lesbar |
+| Format als eine Spalte („FLAC → AIFF“), Ordner kurz ab Quellordner | kompakte Tabelle, voller Pfad als Tooltip und im Protokoll |
+| Nur sichtbare Zeilen zeichnen | flüssig auch bei tausenden Dateien |
+| Tests im Projekt (`cargo test --release`) | Bitgenauigkeit, Länge, MP3, Cover, Abbruch, vorhandene Dateien |
 
 ## Module
 
 ```mermaid
 flowchart LR
-    M["main.rs"] --> A["app.rs"]
-    A --> G["gui.rs"]
-    A --> S["scan.rs"]
-    A --> C["convert.rs"]
-    C --> K["konverter.rs"]
-    K --> AI["aiff.rs"]
-    K --> MP["mp3.rs"]
-    K --> T["tags.rs"]
-    C --> CO["cover.rs"]
-    G --> B["bericht.rs"]
+    main["main.rs"] --> app["app.rs"]
+    main --> gui["gui.rs"]
+    gui --> app
+    gui --> icons["icons.rs"]
+    gui --> bericht["bericht.rs"]
+    app --> scan["scan.rs"]
+    app --> auftraege["auftraege.rs"]
+    auftraege --> konverter["konverter.rs"]
+    konverter --> aiff["aiff.rs"]
+    konverter --> mp3["mp3.rs"]
+    konverter --> tags["tags.rs"]
 ```
 
 | Modul | Inhalt |
 |---|---|
-| `main.rs` | nur Start |
-| `app.rs` | `App`, `Datei`, `Bild`, `Status`, Ordner, Start, Abbruch, Nachrichten |
-| `gui.rs` | Seitenleiste, Tabelle, Fußleiste, Bilderliste, Fenster „Ordner ohne Bild“ |
-| `scan.rs` | liefert Pfade für Audio- und Bilddateien |
-| `convert.rs` | `Ziel`, `Msg`, Sperrregel, Hintergrund-Thread |
-| `konverter.rs` | lesen, auf 44,1 kHz umrechnen, auf 16 Bit runden |
+| `main.rs` | Start, Ordner aus Programm-Argumenten |
+| `app.rs` | `App`, `Datei`, `Bild`, `Status`, Ordner, Auswahl, Start, Abbruch, Zusammenfassung |
+| `gui.rs` | Stil, Werkzeugleiste, Quellen, Tabelle, Statusleiste, Fenster „Cover“, Drag & Drop |
+| `icons.rs` | Lucide-Icons |
+| `scan.rs` | Audio- und Bilddateien in einem Durchlauf finden |
+| `auftraege.rs` | Aufträge parallel im Hintergrund, Nachrichten an die Oberfläche |
+| `konverter.rs` | `Ziel`, Sperrregel, lesen, auf 44,1 kHz umrechnen, auf 16 Bit runden |
 | `aiff.rs` | AIFF schreiben |
 | `mp3.rs` | MP3 schreiben (LAME, 320 kbit/s) |
 | `tags.rs` | Tags und Cover als ID3 |
-| `cover.rs` | Cover im Quellordner suchen |
-| `bericht.rs` | CSV-Protokoll erzeugen und speichern |
+| `bericht.rs` | CSV-Protokoll |

@@ -1,79 +1,65 @@
 # Audio Converter
 
-Windows desktop app with a graphical interface (Rust, egui) that converts whole folders of audio files, for example for the Pioneer XDJ-700 (plays AIFF and MP3, no FLAC).
-
 [Deutsch](README.de.md)
+
+Windows desktop app (Rust, egui) that converts whole folders of audio files, for example for the Pioneer XDJ-700 (plays AIFF and MP3, no FLAC). Own converter built in, no ffmpeg needed.
 
 ```mermaid
 flowchart LR
-    A["Select folder"] --> B["Find files"] --> C["Choose target format"] --> D["Start"] --> E["Convert per file"]
+    A["Add folders"] --> B["Find files"] --> C["Choose target"] --> D["Convert in parallel"] --> E["Summary and CSV log"]
 ```
 
 ## Features
 
-- Select whole folders, subfolders are scanned, multiple folders possible
-- Sources: FLAC, WAV, AIFF, MP3
-- Target via dropdown: **AIFF** (16 bit, 44.1 kHz) or **MP3** (320 kbit/s, 44.1 kHz)
-- Table with number, file, path, conversion and status, same folder = same row color
-- Checkbox per file to exclude it
-- Locked: MP3 sources always, AIFF sources when the target is AIFF
-- Output is saved in the source folder, originals and existing target files stay untouched
-- Start, cancel and progress bar
-- CSV log of all files (download button after a run), separated by semicolons
-- Images are listed, never converted; button "Folders without image" shows folders without cover
-- AIFF output gets the first image from the source folder as cover art
+- Add folders via button (several at once), drag and drop or command line; subfolders are scanned
+- Sources: FLAC, WAV, AIFF; target **AIFF** (16 bit, 44.1 kHz) or **MP3** (320 kbit/s, 44.1 kHz)
+- Compact table: checkbox, number, file, short folder path, format, status with icon; select all in the header
+- Several files at once (one thread per CPU core), cancel at any time
+- Output next to the source; originals and existing files are never touched
+- Tags are copied; for AIFF the first image of a folder is embedded as cover
+- "Cover" window: folders without cover and all found images
+- CSV log after a run, light and dark theme, Lucide icons
 
 ## Requirements
 
 - Windows 11
-- [Rust](https://rustup.rs) (on Windows with the C++ Build Tools, they include the C compiler needed for the MP3 encoder)
-
-No ffmpeg needed.
+- [Rust](https://rustup.rs) with the C++ Build Tools (C compiler for the built-in MP3 encoder)
 
 ## Run
 
 ```
 git clone <repo-url>
 cd audio-konverter
-```
-
-Then:
-
-```
 cargo run --release
 ```
 
-Use `--release` for real conversions. The debug build (`cargo run`) is much slower.
-
-Standalone build: `cargo build --release`. The result is `target\release\audio-konverter.exe`.
+Always use `--release` for real conversions. Tests: `cargo test --release`. Standalone build: `cargo build --release`, result `target\release\audio-konverter.exe`.
 
 ## Project structure
 
 ```
 audio-konverter/
-├── Cargo.toml
+├── Cargo.toml, Cargo.lock
+├── assets/icons/     Lucide icons (SVG, ISC)
 ├── src/
 │   ├── main.rs       Start
 │   ├── app.rs        State, flow
 │   ├── gui.rs        User interface
+│   ├── icons.rs      Icons
 │   ├── scan.rs       Find audio and image files
-│   ├── convert.rs    Background thread, status
+│   ├── auftraege.rs  Parallel jobs in the background
 │   ├── konverter.rs  Own converter: read, resample, 16 bit
 │   ├── aiff.rs       AIFF writer
 │   ├── mp3.rs        MP3 writer (LAME)
 │   ├── tags.rs       Tags and cover as ID3
-│   ├── cover.rs      Find cover in source folder
 │   └── bericht.rs    CSV log
-└── wiki/             features, decisions, diagrams (German)
+└── wiki/             features, decisions, review, diagrams (German)
 ```
 
 ## Planned
 
 - Standalone file, later macOS and Linux
 - DJ player selection with supported formats (Pioneer, Denon)
+- Cover art in MP3 too
 
-Details in the [wiki](wiki/index.md).
-
-## Note
-
-Always test with copies of your files.
+Details in the [wiki](wiki/index.md). Always test with copies of your files.

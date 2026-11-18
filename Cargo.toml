@@ -1,18 +1,19 @@
 [package]
 name = "audio-konverter"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
-eframe = "0.29"   # GUI (egui)
-rfd = "0.15"      # nativer Ordner-Dialog
-walkdir = "2"     # Unterordner durchsuchen
+eframe = "0.29"                                              # GUI (egui)
+egui_extras = { version = "0.29", features = ["svg"] }       # SVG-Icons (Lucide)
+rfd = "0.15"                                                 # nativer Ordner- und Speichern-Dialog
+walkdir = "2"                                                # Unterordner durchsuchen
 symphonia = { version = "0.5", default-features = false, features = ["flac", "wav", "aiff", "pcm"] } # Dateien lesen
-rubato = "0.16"           # Sample-Rate umrechnen
-mp3lame-encoder = "0.1"   # MP3 schreiben (LAME eingebaut, braucht beim Bauen einen C-Compiler)
-id3 = "1"                 # Tags und Cover (ID3v2)
+rubato = "0.16"                                              # Sample-Rate umrechnen
+mp3lame-encoder = "0.1"                                      # MP3 schreiben (LAME eingebaut, braucht beim Bauen einen C-Compiler)
+id3 = "1"                                                    # Tags und Cover (ID3v2)
 
-# Auch im Debug-Build sind die Bibliotheken optimiert, sonst ist die Umwandlung mit
-# `cargo run` sehr langsam (Resampler und MP3-Encoder).
+# Auch im Debug-Build sind die Bibliotheken optimiert. Für echte Umwandlungen
+# trotzdem `cargo run --release` verwenden (siehe wiki/bekannte-probleme.md).
 [profile.dev.package."*"]
 opt-level = 3

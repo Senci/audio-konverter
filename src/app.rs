@@ -1,9 +1,11 @@
 // Zustand und Ablaufsteuerung: Ordner, Dateiliste, Start, Abbruch.
 
-use crate::convert::{self, ist_gesperrt, Msg, Ziel};
+use crate::auftraege::{self, Auftrag, Msg};
+use crate::konverter::{ist_gesperrt, Ziel};
 use crate::scan;
 use eframe::egui;
-use std::path::PathBuf;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Receiver};
 use std::sync::Arc;
@@ -20,24 +22,32 @@ pub enum Status {
     Fehler(String),
 }
 
+impl Status {
+    // Anzeigetext, auch für das Protokoll
+    pub fn text(&self) -> &'static str {
+        match self {
+            Status::Bereit => "bereit",
+            Status::Gesperrt => "gesperrt",
+            Status::Existiert => "existiert bereits",
+            Status::Wartet => "wartet",
+            Status::Laeuft => "läuft",
+            Status::Fertig => "fertig",
+            Status::Fehler(_) => "Fehler",
+        }
+    }
+}
+
 // Eine gefundene Audiodatei
 pub struct Datei {
-    pub pfad: PathBuf,   // vollständiger Pfad der Quelldatei
-    pub wurzel: PathBuf, // vom Nutzer gewählter Quellordner
-    pub ordner: PathBuf, // Ordner, in dem die Datei liegt (Anzeige + Farbe)
+    pub pfad: PathBuf,          // vollständiger Pfad der Quelldatei
+    pub wurzel: PathBuf,        // vom Nutzer gewählter Quellordner
+    pub ordner: PathBuf,        // Ordner, in dem die Datei liegt
+    pub ordner_anzeige: String, // kurzer Pfad ab dem Quellordner, z. B. „Album\Bonus“
     pub name: String,
     pub endung: String, // kleingeschrieben, z. B. "flac"
     pub gewaehlt: bool, // Häkchen
     pub status: Status,
-    pub farbe: usize, // 0 oder 1 (Zeilenfarbe)
-}
-
-// Eine gefundene Bilddatei (mögliches Cover). Wird nur gelistet, nie konvertiert.
-pub struct Bild {
-    pub pfad: PathBuf,
-    pub wurzel: PathBuf,
-    pub ordner: PathBuf,
-    pub name: String,
+    pub gruppe_ungerade: bool, // Zeilenfarbe: wechselt mit jedem Ordner
 }
 
 impl Datei {
@@ -45,7 +55,7 @@ impl Datei {
     pub fn von(&self) -> String {
         self.endung.to_uppercase()
     }
-    // Zielformat für Tabelle und Protokoll ("-" bei MP3-Quellen, die nie umgewandelt werden)
+    // Zielformat ("-" bei MP3-Quellen, die nie umgewandelt werden)
     pub fn nach(&self, ziel: Ziel) -> &'static str {
         if self.endung == "mp3" {
             "-"
@@ -53,117 +63,141 @@ impl Datei {
             ziel.kurz()
         }
     }
+    pub fn waehlbar(&self) -> bool {
+        self.status == Status::Bereit
+    }
 }
 
+// Eine gefundene Bilddatei (mögliches Cover). Wird nur gelistet, nie konvertiert.
+pub struct Bild {
+    pub pfad: PathBuf,
+    pub wurzel: PathBuf,
+    pub ordner: PathBuf,
+    pub ordner_anzeige: String,
+    pub name: String,
+}
+
+#[derive(Default)]
 pub struct App {
-    pub ordner: Vec<PathBuf>, // gewählte Quellordner
-    pub dateien: Vec<Datei>,  // alle gefundenen Dateien
-    pub bilder: Vec<Bild>,    // gefundene Bilddateien (nur Anzeige, Punkt 3)
+    pub ordner: Vec<PathBuf>,               // gewählte Quellordner
+    pub dateien: Vec<Datei>,                // alle gefundenen Audiodateien, nach Ordner sortiert
+    pub bilder: Vec<Bild>,                  // gefundene Bilder, nach Ordner sortiert
+    pub ohne_cover: Vec<(PathBuf, String)>, // Ordner mit Audio, aber ohne Bild (Pfad, Anzeige)
     pub ziel: Ziel,
     pub laeuft: bool,
-    pub gesamt: usize,   // Anzahl Aufträge im aktuellen Lauf
-    pub erledigt: usize, // davon abgeschlossen
-    pub protokoll_bereit: bool, // Protokoll gibt es erst nach einem Lauf
-    pub meldung: Option<String>, // Hinweis unten, z. B. „Protokoll gespeichert“
-    pub zeige_ordner_ohne_bild: bool, // Extra-Fenster an/aus (Punkt 4)
+    pub gesamt: usize,           // Aufträge im aktuellen Lauf
+    pub erledigt: usize,         // davon abgeschlossen
+    pub fehler: usize,           // davon mit Fehler
+    pub protokoll_bereit: bool,  // Protokoll gibt es erst nach einem Lauf
+    pub meldung: Option<String>, // Hinweis in der Statusleiste
+    pub zeige_cover: bool,       // Fenster „Cover“ offen
     rx: Option<Receiver<Msg>>,
     abbruch: Arc<AtomicBool>,
 }
 
-impl App {
-    pub fn new() -> Self {
-        Self {
-            ordner: Vec::new(),
-            dateien: Vec::new(),
-            bilder: Vec::new(),
-            ziel: Ziel::Aiff,
-            laeuft: false,
-            gesamt: 0,
-            erledigt: 0,
-            protokoll_bereit: false,
-            meldung: None,
-            zeige_ordner_ohne_bild: false,
-            rx: None,
-            abbruch: Arc::new(AtomicBool::new(false)),
-        }
-    }
+// Kurzer Ordnerpfad ab dem Quellordner (inklusive dessen Namen)
+fn anzeige(ordner: &Path, wurzel: &Path) -> String {
+    wurzel
+        .parent()
+        .and_then(|p| ordner.strip_prefix(p).ok())
+        .unwrap_or(ordner)
+        .display()
+        .to_string()
+}
 
-    // Ordner samt Unterordnern nach Audiodateien durchsuchen
+fn dateiname(p: &Path) -> String {
+    p.file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default()
+}
+
+impl App {
+    // Ordner samt Unterordnern durchsuchen und Dateien und Bilder aufnehmen
     pub fn ordner_hinzufuegen(&mut self, wurzel: PathBuf) {
-        if self.ordner.contains(&wurzel) {
+        if self.laeuft || self.ordner.contains(&wurzel) {
             return;
         }
-        for pfad in scan::audiodateien(&wurzel) {
-            // Datei nicht doppelt aufnehmen (z. B. bei verschachtelten Ordnern)
-            if self.dateien.iter().any(|d| d.pfad == pfad) {
-                continue;
-            }
-            let endung = scan::endung_von(&pfad);
+        let fund = scan::durchsuche(&wurzel);
+        let bekannt: HashSet<PathBuf> = self.dateien.iter().map(|d| d.pfad.clone()).collect();
+        for pfad in fund.audio.into_iter().filter(|p| !bekannt.contains(p)) {
+            let ordner = pfad.parent().unwrap_or(&wurzel).to_path_buf();
             self.dateien.push(Datei {
-                ordner: pfad.parent().unwrap_or(&wurzel).to_path_buf(),
-                name: pfad
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_default(),
+                ordner_anzeige: anzeige(&ordner, &wurzel),
+                name: dateiname(&pfad),
+                endung: scan::endung_von(&pfad),
                 wurzel: wurzel.clone(),
+                ordner,
                 pfad,
-                endung,
                 gewaehlt: false,
-                status: Status::Wartet, // wird gleich neu berechnet
-                farbe: 0,
+                status: Status::Wartet, // wird in aktualisiere_status() bestimmt
+                gruppe_ungerade: false,
             });
         }
-        for pfad in scan::bilddateien(&wurzel) {
-            if self.bilder.iter().any(|b| b.pfad == pfad) {
-                continue;
-            }
+        let bekannt: HashSet<PathBuf> = self.bilder.iter().map(|b| b.pfad.clone()).collect();
+        for pfad in fund.bilder.into_iter().filter(|p| !bekannt.contains(p)) {
+            let ordner = pfad.parent().unwrap_or(&wurzel).to_path_buf();
             self.bilder.push(Bild {
-                ordner: pfad.parent().unwrap_or(&wurzel).to_path_buf(),
-                name: pfad
-                    .file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_default(),
+                ordner_anzeige: anzeige(&ordner, &wurzel),
+                name: dateiname(&pfad),
                 wurzel: wurzel.clone(),
+                ordner,
                 pfad,
             });
         }
-        self.bilder.sort_by(|a, b| (&a.ordner, &a.name).cmp(&(&b.ordner, &b.name)));
-
         self.ordner.push(wurzel);
         self.neu_ordnen();
     }
 
     // Quellordner samt seinen Dateien und Bildern entfernen
     pub fn ordner_entfernen(&mut self, index: usize) {
+        if self.laeuft {
+            return;
+        }
         let wurzel = self.ordner.remove(index);
         self.dateien.retain(|d| d.wurzel != wurzel);
         self.bilder.retain(|b| b.wurzel != wurzel);
         self.neu_ordnen();
     }
 
-    // Nach Ordner sortieren und Zeilenfarben vergeben
+    pub fn ziel_setzen(&mut self, ziel: Ziel) {
+        if self.ziel != ziel && !self.laeuft {
+            self.ziel = ziel;
+            self.aktualisiere_status();
+        }
+    }
+
+    // Sortieren, Zeilenfarben vergeben, Ordner ohne Cover bestimmen
     fn neu_ordnen(&mut self) {
         self.dateien
             .sort_by(|a, b| (&a.ordner, &a.name).cmp(&(&b.ordner, &b.name)));
-        let mut gruppe = 0;
-        let mut letzter: Option<PathBuf> = None;
-        for d in self.dateien.iter_mut() {
-            if letzter.as_ref() != Some(&d.ordner) {
-                if letzter.is_some() {
-                    gruppe += 1;
-                }
-                letzter = Some(d.ordner.clone());
+        self.bilder
+            .sort_by(|a, b| (&a.ordner, &a.name).cmp(&(&b.ordner, &b.name)));
+        let mut ungerade = true;
+        let mut letzter: Option<&PathBuf> = None;
+        for d in &mut self.dateien {
+            if letzter != Some(&d.ordner) {
+                ungerade = !ungerade;
+                letzter = Some(&d.ordner);
             }
-            d.farbe = gruppe % 2;
+            d.gruppe_ungerade = ungerade;
         }
+        let mit_bild: HashSet<&PathBuf> = self.bilder.iter().map(|b| &b.ordner).collect();
+        self.ohne_cover = self
+            .dateien
+            .iter()
+            .filter(|d| !mit_bild.contains(&d.ordner))
+            .map(|d| (d.ordner.clone(), d.ordner_anzeige.clone()))
+            .collect();
+        self.ohne_cover.dedup(); // Dateien sind nach Ordner sortiert
+        self.meldung = None;
         self.aktualisiere_status();
     }
 
     // Status bestimmen: gesperrt / existiert bereits / bereit
-    pub fn aktualisiere_status(&mut self) {
+    fn aktualisiere_status(&mut self) {
         self.protokoll_bereit = false; // Protokoll passt nicht mehr zur Liste
         let ziel = self.ziel;
-        for d in self.dateien.iter_mut() {
+        for d in &mut self.dateien {
             let neu = if ist_gesperrt(&d.endung, ziel) {
                 Status::Gesperrt
             } else if d.pfad.with_extension(ziel.endung()).exists() {
@@ -179,31 +213,62 @@ impl App {
         }
     }
 
-    // Darf der Start-Button aktiv sein?
+    pub fn anzahl_gewaehlt(&self) -> usize {
+        self.dateien
+            .iter()
+            .filter(|d| d.gewaehlt && d.waehlbar())
+            .count()
+    }
+
+    pub fn anzahl_waehlbar(&self) -> usize {
+        self.dateien.iter().filter(|d| d.waehlbar()).count()
+    }
+
+    // Alle wählbaren Dateien an- oder abwählen
+    pub fn alle_waehlen(&mut self, an: bool) {
+        for d in self.dateien.iter_mut().filter(|d| d.waehlbar()) {
+            d.gewaehlt = an;
+        }
+    }
+
     pub fn kann_starten(&self) -> bool {
-        !self.laeuft
-            && self
-                .dateien
-                .iter()
-                .any(|d| d.gewaehlt && d.status == Status::Bereit)
+        !self.laeuft && self.anzahl_gewaehlt() > 0
+    }
+
+    // Erstes Bild (alphabetisch) im Ordner, wird bei AIFF als Cover eingebettet
+    fn cover_fuer(&self, ordner: &Path) -> Option<PathBuf> {
+        self.bilder
+            .iter()
+            .find(|b| b.ordner == ordner)
+            .map(|b| b.pfad.clone())
     }
 
     // Umwandlung der angehakten Dateien starten
     pub fn starten(&mut self, ctx: &egui::Context) {
+        if !self.kann_starten() {
+            return;
+        }
         let ziel = self.ziel;
         let mut auftraege = Vec::new();
-        for (i, d) in self.dateien.iter_mut().enumerate() {
-            if d.gewaehlt && d.status == Status::Bereit {
-                d.status = Status::Wartet;
-                auftraege.push((i, d.pfad.clone(), d.pfad.with_extension(ziel.endung())));
+        for (index, d) in self.dateien.iter().enumerate() {
+            if d.gewaehlt && d.waehlbar() {
+                auftraege.push(Auftrag {
+                    index,
+                    quelle: d.pfad.clone(),
+                    ziel_pfad: d.pfad.with_extension(ziel.endung()),
+                    cover: (ziel == Ziel::Aiff)
+                        .then(|| self.cover_fuer(&d.ordner))
+                        .flatten(),
+                });
             }
         }
-        if auftraege.is_empty() {
-            return;
+        for a in &auftraege {
+            self.dateien[a.index].status = Status::Wartet;
         }
 
         self.gesamt = auftraege.len();
         self.erledigt = 0;
+        self.fehler = 0;
         self.laeuft = true;
         self.protokoll_bereit = false;
         self.meldung = None;
@@ -211,56 +276,155 @@ impl App {
 
         let (tx, rx) = channel();
         self.rx = Some(rx);
-        convert::starte(auftraege, ziel, self.abbruch.clone(), tx, ctx.clone());
+        auftraege::starte(auftraege, ziel, self.abbruch.clone(), tx, ctx.clone());
     }
 
-    // Laufende Umwandlung abbrechen
     pub fn abbrechen(&mut self) {
         self.abbruch.store(true, Ordering::Relaxed);
     }
 
-    // Alle Unterordner mit Audiodateien, die kein Bild (Cover) enthalten (Punkt 4)
-    pub fn ordner_ohne_bild(&self) -> Vec<&PathBuf> {
-        let mit_bild: std::collections::HashSet<&PathBuf> =
-            self.bilder.iter().map(|b| &b.ordner).collect();
-        let mut treffer: Vec<&PathBuf> = self
-            .dateien
-            .iter()
-            .map(|d| &d.ordner)
-            .filter(|o| !mit_bild.contains(o))
-            .collect();
-        treffer.sort();
-        treffer.dedup();
-        treffer
-    }
-
-    // Nachrichten des Threads abholen und Tabelle aktualisieren
+    // Nachrichten der Hintergrund-Threads abholen und Tabelle aktualisieren
     pub fn nachrichten_verarbeiten(&mut self) {
         let Some(rx) = &self.rx else { return };
         let nachrichten: Vec<Msg> = rx.try_iter().collect();
         for m in nachrichten {
-            match m {
-                Msg::Laeuft(i) => self.dateien[i].status = Status::Laeuft,
+            let (index, status) = match m {
+                Msg::Laeuft(i) => (i, Status::Laeuft),
                 Msg::Fertig(i) => {
-                    self.dateien[i].status = Status::Fertig;
                     self.erledigt += 1;
+                    (i, Status::Fertig)
                 }
                 Msg::Fehler(i, e) => {
-                    self.dateien[i].status = Status::Fehler(e);
                     self.erledigt += 1;
+                    self.fehler += 1;
+                    (i, Status::Fehler(e))
                 }
+                // Abgebrochene Datei wurde gelöscht und ist wieder wählbar
+                Msg::Abgebrochen(i) => (i, Status::Bereit),
                 Msg::Ende => {
-                    self.laeuft = false;
-                    self.protokoll_bereit = true;
-                    self.rx = None;
-                    // Nicht gestartete Dateien (nach Abbruch) wieder freigeben
-                    for d in self.dateien.iter_mut() {
-                        if d.status == Status::Wartet {
-                            d.status = Status::Bereit;
-                        }
-                    }
+                    self.lauf_beenden();
+                    continue;
                 }
+            };
+            if let Some(d) = self.dateien.get_mut(index) {
+                d.status = status;
             }
         }
+    }
+
+    fn lauf_beenden(&mut self) {
+        self.laeuft = false;
+        self.protokoll_bereit = true;
+        self.rx = None;
+        // Nicht gestartete Dateien (nach Abbruch) wieder freigeben
+        for d in &mut self.dateien {
+            if d.status == Status::Wartet {
+                d.status = Status::Bereit;
+            }
+        }
+        let ok = self.erledigt - self.fehler;
+        let offen = self.gesamt - self.erledigt; // nicht begonnen oder abgebrochen
+        self.meldung = Some(match (self.fehler, offen) {
+            (0, 0) => format!("Fertig: {ok} umgewandelt"),
+            (f, 0) => format!("Fertig: {ok} umgewandelt, {f} Fehler"),
+            (f, o) => format!("Abgebrochen: {ok} umgewandelt, {f} Fehler, {o} nicht begonnen"),
+        });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::konverter::tests::{ordner, wav};
+    use crate::konverter::wandle;
+
+    // Wie die Oberfläche: starten und Nachrichten abholen, bis der Lauf endet
+    fn durchlaufen(app: &mut App) {
+        app.starten(&egui::Context::default());
+        while app.laeuft {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            app.nachrichten_verarbeiten();
+        }
+    }
+
+    #[test]
+    fn zwei_quellen_mit_gleichem_ziel() {
+        // „a.wav“ und „a.aif“ ergeben beide „a.mp3“: eine klappt, die andere meldet
+        // einen Fehler und darf die fertige Datei nicht löschen
+        let o = ordner("gleiches-ziel");
+        wav(&o.join("a.wav"), 44_100, 16, 0.5);
+        let nie = AtomicBool::new(false);
+        wandle(&o.join("a.wav"), &o.join("a.aif"), Ziel::Aiff, None, &nie).unwrap();
+
+        let mut app = App::default();
+        app.ordner_hinzufuegen(o.clone());
+        app.ziel_setzen(Ziel::Mp3);
+        assert_eq!(app.anzahl_gewaehlt(), 2);
+        durchlaufen(&mut app);
+
+        let fertig = app
+            .dateien
+            .iter()
+            .filter(|d| d.status == Status::Fertig)
+            .count();
+        let fehler = app
+            .dateien
+            .iter()
+            .filter(|d| matches!(d.status, Status::Fehler(_)))
+            .count();
+        assert_eq!((fertig, fehler), (1, 1));
+        assert!(std::fs::metadata(o.join("a.mp3")).unwrap().len() > 10_000);
+        assert!(app.protokoll_bereit);
+    }
+
+    #[test]
+    fn ordner_ohne_cover_und_cover_zuordnung() {
+        let o = ordner("cover-zuordnung");
+        std::fs::create_dir_all(o.join("mit")).unwrap();
+        std::fs::create_dir_all(o.join("ohne")).unwrap();
+        wav(&o.join("mit/a.wav"), 44_100, 16, 0.1);
+        wav(&o.join("ohne/b.wav"), 44_100, 16, 0.1);
+        std::fs::write(o.join("mit/z.png"), b"x").unwrap();
+        std::fs::write(o.join("mit/b.jpg"), b"x").unwrap();
+
+        let mut app = App::default();
+        app.ordner_hinzufuegen(o.clone());
+        assert_eq!(app.ohne_cover.len(), 1);
+        assert_eq!(app.ohne_cover[0].0, o.join("ohne"));
+        assert_eq!(app.cover_fuer(&o.join("mit")), Some(o.join("mit/b.jpg")));
+        assert_eq!(
+            app.dateien[0].ordner_anzeige,
+            PathBuf::from("cover-zuordnung")
+                .join("mit")
+                .display()
+                .to_string()
+        );
+    }
+
+    // Ganzen Ordner ohne Oberfläche umwandeln, z. B. zum Messen:
+    // AK_ORDNER=D:\Musik AK_ZIEL=mp3 cargo test --release -- --ignored --nocapture ordner_umwandeln
+    #[test]
+    #[ignore]
+    fn ordner_umwandeln() {
+        let mut app = App::default();
+        app.ordner_hinzufuegen(PathBuf::from(
+            std::env::var("AK_ORDNER").expect("AK_ORDNER setzen"),
+        ));
+        if std::env::var("AK_ZIEL").as_deref() == Ok("mp3") {
+            app.ziel_setzen(Ziel::Mp3);
+        }
+        let start = std::time::Instant::now();
+        durchlaufen(&mut app);
+        for d in &app.dateien {
+            if let Status::Fehler(e) = &d.status {
+                println!("Fehler: {}: {e}", d.pfad.display());
+            }
+        }
+        println!(
+            "{} Dateien in {:.1} s · {}",
+            app.gesamt,
+            start.elapsed().as_secs_f32(),
+            app.meldung.unwrap_or_default()
+        );
     }
 }

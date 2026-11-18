@@ -1,23 +1,23 @@
 # Funktionen
 
-- Ganze Ordner wählen, Unterordner werden durchsucht, mehrere Ordner möglich
-- Quellen: FLAC, WAV, AIFF, MP3
-- Tabelle: Nr, Datei, Pfad, Von, Nach, Status; gleicher Ordner = gleiche Zeilenfarbe
-- Nr zählt ab 1, die Gesamtzahl steht oben
-- Häkchen pro Datei zum Ausnehmen
-- Zielformat per Dropdown: AIFF 16 Bit 44,1 kHz oder MP3 320 kbit/s 44,1 kHz
-- Ziel liegt im Ordner der Quelle, Originale bleiben unverändert
-- Start, Abbrechen, Fortschrittsbalken; Fehlertext per Mouseover
-- Protokoll als CSV (Knopf nach einem Lauf): `nr;datei;Ordner/Pfad;von;nach;status`
-- Gefundene Bilder werden aufgelistet (einklappbar), nie konvertiert
-- Knopf „Ordner ohne Bild“ öffnet ein Fenster mit Ordnern ohne Cover
-- Bei AIFF wird das erste Bild im Quellordner als Cover eingebettet
+- Ordner per Knopf (mehrere auf einmal), per Drag & Drop oder als Programm-Argument hinzufügen; Unterordner werden durchsucht
+- Quellen: FLAC, WAV, AIFF (MP3 wird gelistet, aber nie umgewandelt)
+- Ziel per Dropdown: AIFF 16 Bit 44,1 kHz oder MP3 320 kbit/s 44,1 kHz
+- Tabelle: Häkchen, Nr, Datei, Ordner (kurz, ab Quellordner), Format (z. B. FLAC → AIFF), Status mit Icon
+- Kopf-Häkchen wählt alle wählbaren Dateien an oder ab
+- Gleicher Ordner = gleiche Zeilenfarbe; flüssig auch bei tausenden Dateien
+- Mehrere Dateien gleichzeitig (ein Thread pro CPU-Kern), Abbrechen jederzeit
+- Ziel liegt im Ordner der Quelle; Originale und vorhandene Dateien werden nie verändert
+- Nach dem Lauf: Zusammenfassung in der Statusleiste, Protokoll als CSV (`nr;datei;Ordner/Pfad;von;nach;status`)
+- Fenster „Cover“: Ordner ohne Bild und alle gefundenen Bilder; bei AIFF wird das erste Bild eines Ordners eingebettet
+- Tags (Titel, Künstler, Album, Album-Künstler, Genre, Jahr, Track, Disc, Komponist, BPM, Label) werden übernommen
+- Helles und dunkles Systemthema, Lucide-Icons
 
 ## Ablauf
 
 ```mermaid
 flowchart LR
-    A["Ordner wählen<br/>gui.rs"] --> B["Dateien und Bilder suchen<br/>scan.rs"] --> C["Sperren und Status<br/>app.rs"] --> D["Start<br/>app.rs"] --> E["Konverter pro Datei<br/>convert.rs, konverter.rs"] --> F["Status und Fortschritt<br/>app.rs, gui.rs"] --> G["CSV-Protokoll<br/>bericht.rs"]
+    A["Ordner wählen<br/>gui.rs"] --> B["Dateien und Bilder suchen<br/>scan.rs"] --> C["Sperren und Status<br/>app.rs"] --> D["Umwandeln<br/>auftraege.rs"] --> E["parallel pro Datei<br/>konverter.rs"] --> F["Zusammenfassung<br/>app.rs"] --> G["CSV-Protokoll<br/>bericht.rs"]
 ```
 
 ## Sperren
@@ -29,11 +29,9 @@ flowchart TD
     B -->|nein| C{"AIFF und Ziel AIFF?"}
     C -->|ja| X
     C -->|nein| D{"Zieldatei existiert?"}
-    D -->|ja| Y["existiert bereits (gelb)"]
+    D -->|ja| Y["existiert bereits"]
     D -->|nein| Z["bereit"]
 ```
-
-Die Regel steht in `convert.rs` (`ist_gesperrt`), die Statusvergabe in `app.rs`.
 
 ## Umwandlung
 
