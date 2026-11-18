@@ -62,4 +62,8 @@ audio-konverter/
 
 - Later macOS and Linux
 
+## License
+
+Copyright © 2026 Alexander Singh. [GPL-3.0-or-later](LICENSE). Free software: you may use, change and share it; changed versions must stay under the same license. It contains the MP3 encoder LAME (LGPL) and other open libraries under their own licenses.
+
 Details in the [wiki](wiki/index.md). Always test with copies of your files.

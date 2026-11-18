@@ -34,6 +34,8 @@
 | FLAC wie AIFF fest 16 Bit, 44,1 kHz | gleiche Umrechnung für alle Ziele (KISS); FLAC ist dann verlustfrei gegenüber dem 16-Bit-Ergebnis, 16-Bit-Quellen mit 44,1 kHz bleiben sample-genau |
 | FLAC mit `flacenc` (reines Rust), Kopf selbst geschrieben | kein C-Compiler nötig; blockweises Schreiben spart Speicher, der Kopf wird am Ende mit Länge und MD5 neu geschrieben. Blockgröße min = max, damit Leser den Strom nicht für variabel halten |
 | Tags und Cover in FLAC als Vorbis-Kommentar und PICTURE-Block | Standard für FLAC; ID3 in FLAC wird von vielen Playern ignoriert |
+| Lizenz GPL-3.0-or-later | Copyleft für ein fertiges Programm; kompatibel mit LAME (LGPL) und den übrigen Bibliotheken (MIT, Apache-2.0, MPL-2.0). LGPL wäre für Bibliotheken, AGPL für Netzdienste |
+| `unsafe` nur in `mp3.rs` (`set_len`) | `mp3lame-encoder` bietet keine sichere Variante; Stellen mit `SAFETY`-Kommentar |
 | Alle Texte in `texte.rs`, Sprache global (`AtomicU8`) | Fehlertexte entstehen in Hintergrund-Threads und brauchen die Sprache ohne Weiterreichen |
 | Sprache in `sprache.txt` im Einstellungsordner gemerkt, sonst Systemsprache | ohne Zusatzbibliothek; ohne Schreibrecht gilt die Systemsprache |
 | Das Protokoll (CSV) folgt der Sprache, auch der Kopf | eine Sprache pro Programmlauf, einfacher zu erklären |

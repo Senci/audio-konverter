@@ -68,8 +68,8 @@ Drei Stufen: schnell lokal, vollständig in der CI, regelmäßig für neue Siche
 - **Nicht übernommen (YAGNI):** Miri, Fuzzing, `cargo-geiger`, `cargo-semver-checks` (nur für Bibliotheken sinnvoll).
 
 Bekannte Funde vorab:
-- `src/mp3.rs` nutzt zweimal `unsafe { set_len }`. Prüfen, ob `mp3lame-encoder` eine sichere Variante bietet; sonst `// SAFETY:`-Kommentar.
-- Es gibt keine Lizenz (`LICENSE`, `license` in `Cargo.toml`). Für freie Software nötig, und `cargo-deny` braucht sie für die Lizenzprüfung. LAME steht unter LGPL; das ist bei offenem Quellcode gut machbar, die Wahl der eigenen Lizenz sollte das berücksichtigen.
+- `src/mp3.rs` nutzt zweimal `unsafe { set_len }`. Geprüft: `mp3lame-encoder` 0.1.5 bietet keine sichere Variante, die Stellen tragen `SAFETY`-Kommentare.
+- Lizenz: GPL-3.0-or-later, `LICENSE` und `license` in `Cargo.toml` sind angelegt (siehe `entscheidungen.md`). `cargo-deny` prüft später, dass alle Abhängigkeiten dazu passen.
 
 ## 4. Performance
 
@@ -88,7 +88,7 @@ MP3 ist der langsamste Teil (60 Tracks: 34 s gegenüber 4 s für AIFF). Die Zeit
 
 ## Reihenfolge der Umsetzung
 
-1. Lizenz wählen, `LICENSE` anlegen
+1. ~~Lizenz wählen, `LICENSE` anlegen~~ (erledigt: GPL-3.0-or-later)
 2. Lints in `Cargo.toml`, `rustfmt.toml`, `deny.toml`, `typos.toml`; Funde beheben
 3. `.pre-commit-config.yaml` mit `prek`
 4. CI-Workflow (Prüfungen auf 3 Systemen)

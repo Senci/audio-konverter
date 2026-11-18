@@ -26,6 +26,7 @@ flowchart LR
 - [review.md](review.md) – Audit und Design-Review
 - [bekannte-probleme.md](bekannte-probleme.md) – Fehler und Lösung
 - [dj-player.md](dj-player.md) – DJ-Player und unterstützte Formate
+- [release-plan.md](release-plan.md) – Plan: Release-Kette Win/macOS/Linux, Code-Prüfung
 - [diagramme/](diagramme/) – `ablauf.md`, `architektur.md`
 
 ## Projektstruktur

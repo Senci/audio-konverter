@@ -51,7 +51,9 @@ impl Mp3Schreiber {
                 .encode(InterleavedPcm(pcm), self.puffer.spare_capacity_mut())
         }
         .map_err(fehler)?;
-        // SAFETY: LAME hat genau n Bytes in den freien Platz geschrieben (so sieht es die Crate vor)
+        // SAFETY: `puffer` ist leer und hat mindestens `max_required_buffer_size` freien Platz.
+        // `encode` meldet in `n`, wie viele Bytes davon beschrieben wurden (n <= Kapazität);
+        // genau diese Bytes sind initialisiert. Muster aus der Dokumentation der Crate.
         unsafe { self.puffer.set_len(n) };
         self.datei
             .write_all(&self.puffer)
@@ -66,7 +68,8 @@ impl Mp3Schreiber {
             .enc
             .flush::<FlushNoGap>(self.puffer.spare_capacity_mut())
             .map_err(fehler)?;
-        // SAFETY: wie oben
+        // SAFETY: wie in `schreibe`: leerer Puffer mit reservierter Kapazität, `flush` meldet
+        // in `n` die beschriebenen Bytes.
         unsafe { self.puffer.set_len(n) };
         self.datei
             .write_all(&self.puffer)

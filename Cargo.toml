@@ -2,6 +2,8 @@
 name = "audio-konverter"
 version = "0.3.0"
 edition = "2021"
+license = "GPL-3.0-or-later"
+authors = ["Alexander Singh"]
 
 [dependencies]
 eframe = "0.29"                                              # GUI (egui)
