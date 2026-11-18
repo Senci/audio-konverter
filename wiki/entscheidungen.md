@@ -29,6 +29,7 @@
 | Format als eine Spalte („FLAC → AIFF“), Ordner kurz ab Quellordner | kompakte Tabelle, voller Pfad als Tooltip und im Protokoll |
 | Nur sichtbare Zeilen zeichnen | flüssig auch bei tausenden Dateien |
 | Tests im Projekt (`cargo test --release`) | Bitgenauigkeit, Länge, MP3, Cover, Abbruch, vorhandene Dateien |
+| Zielformate AIFF (16 Bit, 44,1 kHz) und MP3 (320 kbit/s), keine Playerauswahl | alle geprüften Pioneer- und Denon-Player spielen beide Formate (Liste in `dj-player.md`); eine Auswahl würde am Ergebnis nichts ändern (KISS, YAGNI) |
 
 ## Module
 
