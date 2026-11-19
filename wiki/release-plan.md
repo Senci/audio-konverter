@@ -94,3 +94,17 @@ MP3 ist der langsamste Teil (60 Tracks: 34 s gegenüber 4 s für AIFF). Die Zeit
 4. CI-Workflow (Prüfungen auf 3 Systemen)
 5. semantic-release + Build-Matrix + `cargo-packager`
 6. Ersten Release auf allen 3 Systemen von Hand prüfen
+
+## Offen für morgen
+
+Stand: Lizenz GPL-3.0-or-later mit Urheber Alexander Singh 2026 ist eingetragen. Die Tests laufen auf dem Windows-PC grün (18 bestanden).
+
+1. Eigene `.exe` mit `cargo build --release` bauen und in den Hauptordner kopieren
+2. Zeit für 60 Tracks nach AIFF messen; über 60 s ist ein Problem
+3. GitHub-Workflow „Windows-Build“ starten, bis er grün ist
+4. Die `.exe` aus den Artifacts auf einem zweiten PC starten
+5. Release `v0.4.2` setzen, sobald der Workflow grün ist
+6. Versionsnummer in `Cargo.toml` steht noch auf 0.3.0; semantic-release setzt sie später automatisch
+7. ~~Testlauf zeigt keine Ausgabe~~ (erledigt: Konsolen-Attribut in `main.rs` gilt nicht mehr für Tests, `cargo test --release` zeigt jetzt die Ergebnisse)
+8. Audit und Design-Überarbeitung (`review.md`) warten auf Entscheidung: nur S/A oder auch B
+9. Danach Schritt 1 des Plans: Lint-Regeln in `Cargo.toml`, `rustfmt.toml`, `deny.toml`, `typos.toml`
