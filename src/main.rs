@@ -1,5 +1,5 @@
-// Release-Build ohne zusätzliches Konsolenfenster
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// Release-Build ohne zusätzliches Konsolenfenster (nicht beim Testlauf, sonst fehlt dessen Ausgabe)
+#![cfg_attr(all(not(debug_assertions), not(test)), windows_subsystem = "windows")]
 
 mod aiff; // AIFF-Datei schreiben
 mod app; // Zustand und Ablaufsteuerung
