@@ -55,7 +55,6 @@ Drei Stufen: schnell lokal, vollständig in der CI, regelmäßig für neue Siche
 |---|---|---|---|---|
 | `rustfmt` | Formatierung | ✓ | ✓ | |
 | `clippy` (`-D warnings`) | Fehler, unnötiger Code, Performance-Hinweise | ✓ | ✓ (alle 3 Systeme) | |
-| `typos` | Tippfehler in Code und Doku | ✓ | ✓ | |
 | `committed` | Commit-Text im Conventional-Commits-Format (sonst kann semantic-release keine Version bestimmen) | ✓ (commit-msg) | ✓ | |
 | `cargo test --release` | Tests | | ✓ (alle 3 Systeme) | |
 | `cargo-deny` | Lizenzen, bekannte Lücken (RustSec), doppelte Versionen, fremde Quellen | | ✓ | ✓ |
@@ -89,8 +88,8 @@ MP3 ist der langsamste Teil (60 Tracks: 34 s gegenüber 4 s für AIFF). Die Zeit
 ## Reihenfolge der Umsetzung
 
 1. ~~Lizenz wählen, `LICENSE` anlegen~~ (erledigt: GPL-3.0-or-later)
-2. Lints in `Cargo.toml`, `rustfmt.toml`, `deny.toml`, `typos.toml`; Funde beheben
-3. `.pre-commit-config.yaml` mit `prek`
+2. ~~Lints in `Cargo.toml`, `deny.toml`; Funde beheben~~ (erledigt; `rustfmt.toml` und `typos` weggelassen, siehe `pruefungen.md`)
+3. ~~`.pre-commit-config.yaml` mit `prek`~~ (erledigt)
 4. CI-Workflow (Prüfungen auf 3 Systemen)
 5. semantic-release + Build-Matrix + `cargo-packager`
 6. Ersten Release auf allen 3 Systemen von Hand prüfen
@@ -106,5 +105,5 @@ Stand: Lizenz GPL-3.0-or-later mit Urheber Alexander Singh 2026 ist eingetragen.
 5. Release `v0.4.2` setzen, sobald der Workflow grün ist
 6. Versionsnummer in `Cargo.toml` steht noch auf 0.3.0; semantic-release setzt sie später automatisch
 7. ~~Testlauf zeigt keine Ausgabe~~ (erledigt: Konsolen-Attribut in `main.rs` gilt nicht mehr für Tests, `cargo test --release` zeigt jetzt die Ergebnisse)
-8. Audit und Design-Überarbeitung (`review.md`) warten auf Entscheidung: nur S/A oder auch B
-9. Danach Schritt 1 des Plans: Lint-Regeln in `Cargo.toml`, `rustfmt.toml`, `deny.toml`, `typos.toml`
+8. Design-Punkte B und C aus `review.md` sind auf später verschoben
+9. ~~Lint-Regeln und Pre-Commit-Hooks~~ (erledigt, siehe `pruefungen.md`); als Nächstes Schritt 4: CI-Workflow

@@ -497,7 +497,7 @@ pub(crate) mod tests {
                     pcm = inhalt[8..]
                         .chunks_exact(2)
                         .map(|b| i16::from_be_bytes([b[0], b[1]]))
-                        .collect()
+                        .collect();
                 }
                 b"ID3 " => id3 = inhalt.to_vec(),
                 _ => {}
@@ -679,17 +679,17 @@ pub(crate) mod tests {
             &nie_abbrechen(),
         )
         .unwrap();
-        let (r, b, samples) = dekodiert(&o.join("a.flac"));
-        assert_eq!((r, b), (44_100, 16));
+        let (rate, bits, samples) = dekodiert(&o.join("a.flac"));
+        assert_eq!((rate, bits), (44_100, 16));
         assert_eq!(samples, original);
 
         for (rate, bits) in [(96_000, 24), (48_000, 24)] {
-            let q = o.join(format!("b{rate}.wav"));
-            wav(&q, rate, bits, 1.0);
-            let z = o.join(format!("b{rate}.flac"));
-            wandle(&q, &z, Ziel::Flac, None, &nie_abbrechen()).unwrap();
-            let (r, b, samples) = dekodiert(&z);
-            assert_eq!((r, b), (44_100, 16), "{rate} Hz, {bits} Bit");
+            let quelle = o.join(format!("b{rate}.wav"));
+            wav(&quelle, rate, bits, 1.0);
+            let ziel = o.join(format!("b{rate}.flac"));
+            wandle(&quelle, &ziel, Ziel::Flac, None, &nie_abbrechen()).unwrap();
+            let (rate_aus, bits_aus, samples) = dekodiert(&ziel);
+            assert_eq!((rate_aus, bits_aus), (44_100, 16), "{rate} Hz, {bits} Bit");
             assert_eq!(samples.len() / 2, 44_100);
         }
     }

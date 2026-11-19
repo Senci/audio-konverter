@@ -35,6 +35,8 @@ cargo run --release
 
 Für echte Umwandlungen immer `--release`. Tests: `cargo test --release`. Fertige Datei: `cargo build --release`, Ergebnis `target\release\audio-konverter.exe` (eine Datei, ohne Rust und ohne Installation lauffähig). Ohne Rust auf dem PC: auf GitHub unter *Actions → Windows-Build → Run workflow*, die `.exe` ist der Download des Laufs; ein Tag wie `v0.4.0` erzeugt zusätzlich ein Release.
 
+Vor dem Commit prüfen: `prek install` (einmal), siehe `wiki/pruefungen.md`.
+
 ## Projektstruktur
 
 ```

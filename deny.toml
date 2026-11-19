@@ -1,0 +1,52 @@
+# cargo-deny: prüft Abhängigkeiten auf Sicherheitslücken, Lizenzen und Herkunft.
+# Lauf: `cargo deny check` (Pre-Commit nicht, zu langsam; läuft in der CI).
+
+[graph]
+targets = [
+    "x86_64-pc-windows-msvc",
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-gnu",
+]
+
+[advisories]
+# Lücken (RustSec) lassen die Prüfung scheitern; nicht mehr gepflegte Bibliotheken nur als Hinweis
+unmaintained = "workspace"
+yanked = "deny"
+ignore = [
+    # quick-xml 0.30 steckt nur unter Linux in eframe -> accesskit_unix -> zbus (Bedienungshilfen).
+    # Das Programm liest kein fremdes XML. Behebung: eframe auf eine neuere Version heben.
+    { id = "RUSTSEC-2026-0194", reason = "nur Linux, kein fremdes XML; mit neuem eframe beheben" },
+    { id = "RUSTSEC-2026-0195", reason = "nur Linux, kein fremdes XML; mit neuem eframe beheben" },
+]
+
+[licenses]
+# Das Programm steht unter GPL-3.0-or-later; erlaubt sind nur dazu passende Lizenzen
+allow = [
+    "GPL-3.0-or-later", # das Programm selbst
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "BSL-1.0",
+    "LGPL-3.0", # mp3lame-encoder und LAME (ältere Schreibweise, daher eine Warnung)
+]
+confidence-threshold = 0.9
+
+# Schriften von egui (Ubuntu-Schriftlizenz und OFL): als Daten eingebettet, nicht als Code
+exceptions = [
+    { crate = "epaint_default_fonts", allow = ["OFL-1.1", "LicenseRef-UFL-1.0"] },
+]
+
+[bans]
+# Mehrere Versionen derselben Bibliothek sind bei egui nicht zu vermeiden: nur Hinweis
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

@@ -39,6 +39,7 @@
 | Alle Texte in `texte.rs`, Sprache global (`AtomicU8`) | Fehlertexte entstehen in Hintergrund-Threads und brauchen die Sprache ohne Weiterreichen |
 | Sprache in `sprache.txt` im Einstellungsordner gemerkt, sonst Systemsprache | ohne Zusatzbibliothek; ohne Schreibrecht gilt die Systemsprache |
 | Das Protokoll (CSV) folgt der Sprache, auch der Kopf | eine Sprache pro Programmlauf, einfacher zu erklären |
+| Prüfungen: nur rustfmt, clippy (pedantic), committed, cargo-deny | `typos` meldet bei deutschen Texten rund 200 Fehlalarme; `rustfmt.toml` und `cargo-machete` bringen jetzt nichts (YAGNI) |
 
 ## Module
 

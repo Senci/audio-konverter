@@ -1,0 +1,6 @@
+# committed: prüft den Commit-Text. Format: „feat: …“, „fix: …“, „docs: …“, „chore: …“
+# (Conventional Commits), damit semantic-release später die Version bestimmen kann.
+style = "conventional"
+subject_length = 100
+imperative_subject = false
+line_length = 100

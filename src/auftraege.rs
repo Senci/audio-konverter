@@ -38,7 +38,7 @@ pub fn starte(
     std::thread::spawn(move || {
         let naechster = AtomicUsize::new(0);
         let threads = std::thread::available_parallelism()
-            .map_or(2, |n| n.get())
+            .map_or(2, std::num::NonZero::get)
             .min(auftraege.len())
             .max(1);
         std::thread::scope(|s| {

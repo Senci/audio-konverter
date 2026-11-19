@@ -411,7 +411,7 @@ mod tests {
     // Ganzen Ordner ohne Oberfläche umwandeln, z. B. zum Messen:
     // AK_ORDNER=D:\Musik AK_ZIEL=mp3 (oder flac) cargo test --release -- --ignored --nocapture ordner_umwandeln
     #[test]
-    #[ignore]
+    #[ignore = "braucht einen echten Ordner (AK_ORDNER), siehe Kommentar"]
     fn ordner_umwandeln() {
         let mut app = App::default();
         app.ordner_hinzufuegen(PathBuf::from(

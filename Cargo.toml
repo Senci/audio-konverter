@@ -1,6 +1,6 @@
 [package]
 name = "audio-konverter"
-version = "0.3.0"
+version = "0.4.4"
 edition = "2021"
 license = "GPL-3.0-or-later"
 authors = ["Alexander Singh"]
@@ -20,6 +20,24 @@ flacenc = { version = "0.5.1", default-features = false }   # FLAC schreiben (re
 # trotzdem `cargo run --release` verwenden (siehe wiki/bekannte-probleme.md).
 [profile.dev.package."*"]
 opt-level = 3
+
+# Lint-Regeln: clippy mit den Gruppen „all“ und „pedantic“ als Warnung (im Pre-Commit und in der CI
+# mit -D warnings als Fehler). Ausnahmen stehen hier mit Begründung, nicht im Code verstreut.
+[lints.rust]
+unsafe_op_in_unsafe_fn = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+undocumented_unsafe_blocks = "warn" # jedes `unsafe` braucht einen SAFETY-Kommentar
+dbg_macro = "warn"
+todo = "warn"
+# Audio-Rechnen wandelt ständig zwischen Ganzzahlen und Fließkomma (Samples, Frames, Raten).
+# Die Werte sind durch die Formate begrenzt, die Warnungen wären überall dasselbe Rauschen.
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
 
 # Fertige Datei: voll optimiert, klein. Kein panic = "abort", die Umwandlung fängt Abstürze ab.
 [profile.release]

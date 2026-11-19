@@ -27,6 +27,7 @@ flowchart LR
 - [bekannte-probleme.md](bekannte-probleme.md) – Fehler und Lösung
 - [dj-player.md](dj-player.md) – DJ-Player und unterstützte Formate
 - [release-plan.md](release-plan.md) – Plan: Release-Kette Win/macOS/Linux, Code-Prüfung
+- [pruefungen.md](pruefungen.md) – Lints, Pre-Commit-Hooks, `cargo deny`
 - [diagramme/](diagramme/) – `ablauf.md`, `architektur.md`
 
 ## Projektstruktur
@@ -35,6 +36,7 @@ flowchart LR
 audio-konverter/
 ├── Cargo.toml, Cargo.lock
 ├── assets/icons/     Lucide-Icons (SVG)
+├── deny.toml, committed.toml, .pre-commit-config.yaml   Prüfungen
 ├── .cargo/config.toml, .github/workflows/windows.yml   Build der Windows-.exe
 ├── src/              main, app, gui, icons, texte, scan, auftraege, konverter, aiff, mp3, flac, tags, bericht
 └── wiki/
