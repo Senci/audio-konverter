@@ -24,6 +24,10 @@ mp3lame-encoder = "0.3"                                      # MP3 schreiben (LA
 id3 = "1.17"                                                 # Tags und Cover (ID3v2)
 flacenc = { version = "0.5.1", default-features = false }   # FLAC schreiben (reines Rust)
 
+[dev-dependencies]
+tempfile = "3"
+symphonia = { version = "0.5", default-features = false, features = ["mp3"] }
+
 # Auch im Debug-Build sind die Bibliotheken optimiert. Für echte Umwandlungen
 # trotzdem `cargo run --release` verwenden (siehe wiki/bekannte-probleme.md).
 [profile.dev.package."*"]

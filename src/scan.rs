@@ -36,3 +36,30 @@ pub fn durchsuche(wurzel: &Path) -> Fund {
     }
     fund
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn endung_ist_kleingeschrieben_oder_leer() {
+        assert_eq!(endung_von(Path::new("titel.FLAC")), "flac");
+        assert_eq!(endung_von(Path::new("ohne-endung")), "");
+    }
+
+    #[test]
+    fn findet_audio_und_bilder_rekursiv_aber_ignoriert_andere_dateien() {
+        let temp = tempfile::tempdir().unwrap();
+        let unterordner = temp.path().join("unterordner");
+        std::fs::create_dir(&unterordner).unwrap();
+        let audio = unterordner.join("titel.WAV");
+        let bild = temp.path().join("cover.JPG");
+        std::fs::write(&audio, b"audio").unwrap();
+        std::fs::write(&bild, b"bild").unwrap();
+        std::fs::write(temp.path().join("notiz.txt"), b"text").unwrap();
+
+        let fund = durchsuche(temp.path());
+        assert_eq!(fund.audio, vec![audio]);
+        assert_eq!(fund.bilder, vec![bild]);
+    }
+}
