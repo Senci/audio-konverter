@@ -25,8 +25,12 @@ jobs:
     runs-on: windows-2025
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: cargo test --release --locked
-      - run: cargo build --release --locked
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          version: 2026.11.3
+          cache: false
+      - run: mise run test
+      - run: mise run build
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: audio-konverter-windows-x86_64
@@ -40,12 +44,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install native dependencies
         run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libx11-dev libxi-dev libgl1-mesa-dev libxcursor-dev libxrandr-dev libxinerama-dev libxkbcommon-dev libwayland-dev
-      - run: cargo test --release --locked
-      - run: cargo build --release --locked
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          version: 2026.11.3
+          cache: false
+      - run: mise run test
+      - run: mise run build
       - name: Build Debian package
         run: |
-          cargo install cargo-packager --version 0.11.8 --locked
-          cargo packager --release --formats deb
+          mise exec -- cargo install cargo-packager --version 0.11.8 --locked
+          mise exec -- cargo packager --release --formats deb
       - name: Build tar archive
         run: |
           mkdir -p dist
@@ -62,19 +70,23 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
-      - run: cargo test --release --locked
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+        with:
+          version: 2026.11.3
+          cache: false
+      - run: mise exec -- rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - run: mise run test
       - name: Build universal binary and packages
         run: |
-          cargo build --release --locked --target aarch64-apple-darwin
-          cargo build --release --locked --target x86_64-apple-darwin
+          mise exec -- cargo build --release --locked --target aarch64-apple-darwin
+          mise exec -- cargo build --release --locked --target x86_64-apple-darwin
           mkdir -p target/universal-apple-darwin/release
           lipo -create target/aarch64-apple-darwin/release/audio-konverter target/x86_64-apple-darwin/release/audio-konverter -output target/universal-apple-darwin/release/audio-konverter
           lipo -verify_arch arm64 x86_64 target/universal-apple-darwin/release/audio-konverter
           codesign --force --sign - target/universal-apple-darwin/release/audio-konverter
           codesign --verify target/universal-apple-darwin/release/audio-konverter
-          cargo install cargo-packager --version 0.11.8 --locked
-          cargo packager --release --target universal-apple-darwin --formats app,dmg
+          mise exec -- cargo install cargo-packager --version 0.11.8 --locked
+          mise exec -- cargo packager --release --target universal-apple-darwin --formats app,dmg
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: audio-konverter-macos-universal

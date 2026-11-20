@@ -37,6 +37,20 @@ Always use `--release` for real conversions. Tests: `cargo test --release`. Stan
 
 Checks before committing: `prek install` (once), see `wiki/pruefungen.md`.
 
+### Development with mise
+
+[mise](https://mise.jdx.dev/getting-started.html) is optional for local development. It installs the project's pinned Rust toolchain using rustup; the platform's C compiler and native libraries are still required. From the project directory:
+
+```sh
+mise install
+mise run test   # Rust release tests
+mise run check  # formatting and Clippy
+mise run build  # optimized binary
+mise run run    # launch the app
+```
+
+`mise tasks` lists the available commands. GitHub Actions uses the same pinned Rust version and tasks. The release-version script tests additionally require Python 3.11 or newer: `python3 -m unittest discover -s tests`.
+
 ## Cross-platform builds (experimental)
 
 GitHub Actions → **Build and release** → **Run workflow** builds Windows x64, Linux x64 and a universal macOS package. Download the artifacts from the run. Pushing a `v*` tag creates one GitHub release after all three builds succeed; the tag must match the version in `Cargo.toml`.

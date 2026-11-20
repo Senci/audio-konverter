@@ -109,8 +109,7 @@ fn anzeige(ordner: &Path, wurzel: &Path) -> String {
 
 fn dateiname(p: &Path) -> String {
     p.file_name()
-        .map(|n| n.to_string_lossy().to_string())
-        .unwrap_or_default()
+        .map_or_default(|n| n.to_string_lossy().to_string())
 }
 
 impl App {
