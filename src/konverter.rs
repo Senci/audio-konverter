@@ -495,7 +495,9 @@ pub(crate) mod tests {
                 b"COMM" => frames = u32::from_be_bytes(inhalt[2..6].try_into().unwrap()),
                 b"SSND" => {
                     pcm = inhalt[8..]
-                        .chunks_exact(2)
+                        .as_chunks::<2>()
+                        .0
+                        .iter()
                         .map(|b| i16::from_be_bytes([b[0], b[1]]))
                         .collect();
                 }
